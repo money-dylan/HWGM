@@ -41,7 +41,7 @@ function rulesDigest() {
   return stripHtml(h.slice(a, b));
 }
 function briefSections() {
-  const t = read(path.join(dir, 'CLAUDE.md')) || read(path.join(dir, 'gm-brief.md'));   // dev: CLAUDE.md; shipped installs carry gm-brief.md (generated)
+  const t = read(path.join(dir, process.env.GM_BRIEF || 'gm-brief.md'));   // GM_BRIEF in .env points a dev install at its working brief
   const pick = (title) => { const m = t.match(new RegExp('## ' + title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\\s\\S]*?(?=\\n## |$)')); return m ? m[0] : ''; };
   return [pick('The four laws'), pick('Standing commitments'), pick('Objectives, questions, satchel — keeping the Case File honest'), pick('Generating tales (end of session)'), pick('Character creation — the script for a new campaign')].join('\n\n');
 }

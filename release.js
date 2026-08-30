@@ -7,9 +7,8 @@ const path = require('path');
 const dir = __dirname;
 const VERSION = require('./package.json').version;
 const outArg = process.argv.slice(2).find(a => !a.startsWith('--'));
-function briefText() { return fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8').split(/\r?\n/).filter(l => !/claude|anthropic|C:\\Users|\.claude\b/i.test(l)).join('\n'); }
-// --brief: only regenerate ./gm-brief.md (the public copy of the GM brief, committed to the repo)
-if (process.argv.includes('--brief')) { fs.writeFileSync(path.join(dir, 'gm-brief.md'), briefText()); console.log('gm-brief.md regenerated'); process.exit(0); }
+// --brief: regenerate ./gm-brief.md, the public copy of the GM brief
+if (process.argv.includes('--brief')) { require('child_process').spawnSync(process.execPath, [path.join(dir, 'tools', 'brief.js')], { stdio: 'inherit' }); process.exit(0); }
 const out = path.resolve(outArg || path.join(dir, 'dist', 'hollow-ledger-' + VERSION));
 
 const FILES = ['server.js', 'engine.js', 'gm.js', 'save.js', 'hollow-ledger.html', 'package.json', 'package-lock.json', 'voice-bible.md', 'roll-doctrine.md'];
@@ -26,7 +25,7 @@ function cpDir(src, dst, filter) {
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive: true });
 for (const f of FILES) cp(path.join(dir, f), path.join(out, f));
 // the GM brief ships under its own name; engine.js reads gm-brief.md first
-fs.writeFileSync(path.join(out, 'gm-brief.md'), briefText());
+cp(path.join(dir, 'gm-brief.md'), path.join(out, 'gm-brief.md'));   // the public brief (regenerate with node release.js --brief)
 for (const d of DIRS) cpDir(path.join(dir, d), path.join(out, d));
 // music: the studio's tomp3 re-encodes each track at a lighter VBR (~2.7x smaller, fine under narration); straight copy without it
 {
