@@ -28,6 +28,7 @@ function gmAlive() {
   return new Promise(res => { const q = http.get({ host: '127.0.0.1', port: GM_PORT, path: '/status', timeout: 800 }, r => { r.resume(); res(true); }); q.on('error', () => res(false)); q.on('timeout', () => { q.destroy(); res(false); }); });
 }
 async function startGm(reason) {
+  if ((readEnv().GM_ENGINE || '').toLowerCase() === 'off') { console.log('GM engine is off (GM_ENGINE=off in .env) - a Claude session runs this table'); return; }
   if (gmProc) { try { gmProc.kill(); } catch (e) {} gmProc = null; await new Promise(r => setTimeout(r, 600)); }
   else if (await gmAlive()) { console.log('GM engine already running on :' + GM_PORT + ' (not spawning)'); return; }
   const env = Object.assign({}, process.env, readEnv(), { GM_PORT: String(GM_PORT) });
@@ -619,5 +620,5 @@ http.createServer((req, res) => {
 }).listen(PORT, () => {
   console.log('The Hollow Ledger is open at http://localhost:' + PORT); startVoice(); startGm();
   // keep the Game Master alive: if nothing answers on GM_PORT and a key exists, start it again
-  setInterval(async () => { if (gmProc) return; if (!readEnv().ANTHROPIC_API_KEY) return; if (!(await gmAlive())) startGm('engine was not answering'); }, 30000);
+  setInterval(async () => { if (gmProc) return; const env2 = readEnv(); if (!env2.ANTHROPIC_API_KEY || (env2.GM_ENGINE || '').toLowerCase() === 'off') return; if (!(await gmAlive())) startGm('engine was not answering'); }, 30000);
 });

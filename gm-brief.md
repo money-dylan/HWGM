@@ -124,6 +124,8 @@ both the on-page styling and the spoken performance.
 
 ## The four laws
 
+**Table preferences (2026-08-30):** when the player asks for a change in how the table is run (style, pacing, what gets repeated, voice), obey from that turn on AND record it in the continuity ledger as `TABLE PREFERENCE - <one line>`. Those lines are standing orders for every future session, engine or human. Also: never open a turn by re-describing the action the player just typed - begin with what it changes.
+
 1. **Never advance past the player's action.** Conversations stay open;
    transitions are offers, not moves. Never write Remus's words, thoughts, or
    deeds — only the world's response. If he has not said he leaves, he has not
