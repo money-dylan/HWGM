@@ -85,6 +85,17 @@ argv.forEach((a, i) => {
   });
 });
 
+// the same patch lands in sheet.json immediately (sheet.json patch): the server copy must never
+// lag the record - bonds and ties are not page form fields and would otherwise be lost.
+if (Object.keys(patch).length) {
+  try {
+    const shp = path.join(dir, 'sheet.json');
+    const sh = JSON.parse(fs.readFileSync(shp, 'utf8'));
+    Object.assign(sh, patch);
+    fs.writeFileSync(shp, JSON.stringify(sh, null, 2));
+  } catch (e) {}
+}
+
 // character memory: --mem "nell|showed him her mum's letter"  (repeatable)
 argv.forEach((a, i) => {
   if (a !== '--mem' || !argv[i + 1]) return;

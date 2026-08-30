@@ -3583,7 +3583,7 @@ if(window.matchMedia){ try{ window.matchMedia('(prefers-color-scheme: dark)').ad
     document.querySelectorAll('[data-k]').forEach(function(el){
       data[el.dataset.k]=(el.type==='checkbox')?el.checked:el.value;
     });
-    Object.keys(store).forEach(function(k){ if(k.indexOf('map_')===0)data[k]=store[k] });
+    Object.keys(store).forEach(function(k){ if(/^(map_|bond_|tie_|tienote_|heard_)/.test(k)||k==='fed')data[k]=store[k] });
     fetch('/sheet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(function(){});
   }
   document.querySelectorAll('[data-k]').forEach(function(el){
