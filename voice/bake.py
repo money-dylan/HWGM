@@ -39,6 +39,18 @@ def main():
     if not todo:
         print("nothing to bake"); return
     print(f"baking {len(todo)} tales ...", flush=True)
+    # the flag tells the table server the GPU is busy; it is ours to create and, whatever happens, to remove
+    FLAG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "BAKING")
+    open(FLAG, "w").close()
+    try:
+        _bake(todo, FLAG)
+    finally:
+        try: os.remove(FLAG)
+        except OSError: pass
+
+def _bake(todo, FLAG):
+    from chatterbox.tts import ChatterboxTTS
+    import torchaudio
 
     m = ChatterboxTTS.from_pretrained(device="cuda" if torch.cuda.is_available() else "cpu")
     gap = torch.zeros(1, int(m.sr * 0.28))
@@ -63,6 +75,8 @@ def main():
             torchaudio.save(tmp, audio, m.sr, format="wav")
             os.replace(tmp, os.path.join(OUT, t["id"] + ".wav"))
             print(f"  {t['id']}: {audio.shape[-1]/m.sr/60:.1f} min in {time.time()-t0:.0f}s", flush=True)
+            try: os.utime(FLAG, None)   # still alive: keeps the server from calling the flag stale
+            except OSError: pass
         except Exception as e:
             print(f"  {t['id']} FAILED: {e}", flush=True)
     print("bake complete", flush=True)

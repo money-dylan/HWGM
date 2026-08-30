@@ -163,7 +163,7 @@ function writeTales(slot, input) {
   if (DRY) { log('DRY — would add tales: ' + added.join(', ')); return 'dry: ' + added.join(', '); }
   fs.writeFileSync(path.join(dir, 'tales.json'), JSON.stringify(tj, null, 2));
   // bake in the background, quietly (skips existing)
-  try { fs.writeFileSync(path.join(dir, 'voice/BAKING'), ''); const p = spawn(path.join(dir, 'voice/venv/Scripts/python.exe'), ['bake.py'], { cwd: path.join(dir, 'voice'), detached: true, stdio: 'ignore' }); p.on('exit', () => { try { fs.unlinkSync(path.join(dir, 'voice/BAKING')); } catch (e) {} }); p.unref(); } catch (e) { try { fs.unlinkSync(path.join(dir, 'voice/BAKING')); } catch (e2) {} }
+  try { const p = spawn(path.join(dir, 'voice/venv/Scripts/python.exe'), ['bake.py'], { cwd: path.join(dir, 'voice'), detached: true, stdio: 'ignore' }); p.on('exit', () => { try { fs.unlinkSync(path.join(dir, 'voice/BAKING')); } catch (e) {} }); p.unref(); } catch (e) { try { fs.unlinkSync(path.join(dir, 'voice/BAKING')); } catch (e2) {} }
   return 'added: ' + added.join(', ') + ' (baking in the background)';
 }
 function updateContinuity(slot, note) {

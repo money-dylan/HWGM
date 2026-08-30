@@ -116,6 +116,9 @@ const SAY_VERBS = '(?:said|says|saying|asked|asks|whisper(?:ed|s)?|murmur(?:ed|s
 
 // serialized, cached Chatterbox generation: one GPU job at a time,
 // repeated segments (replays, reconnects) come back instantly, timing logged
+// a bake in progress owns the GPU; a flag nobody has touched for two hours is a stranded one and is ignored
+function bakingNow() { try { const st = fs.statSync(path.join(dir, 'voice/BAKING')); if (Date.now() - st.mtimeMs > 2 * 3600 * 1000) { try { fs.unlinkSync(path.join(dir, 'voice/BAKING')); } catch (e) {} console.log('stale voice/BAKING flag removed'); return false; } return true; } catch (e) { return false; } }
+function ttsLog(line) { try { fs.appendFileSync(path.join(dir, 'voice/tts.log'), new Date().toISOString() + ' ' + line + '\n'); } catch (e) {} }
 const CB_CACHE = new Map(); let CB_CHAIN = Promise.resolve();
 function chatterboxCached(seg) {
   const k = seg.speaker + '|' + seg.mood + '|' + seg.text;
@@ -555,12 +558,13 @@ http.createServer((req, res) => {
         // prefer the local Chatterbox engine when it is up; fall back to edge voices
         let useCB = false;
         try {
-          if (fs.existsSync(path.join(dir, 'voice/BAKING'))) throw new Error('baking');
+          if (bakingNow()) throw new Error('baking');
           const first0 = list[0]; const probe = await chatterboxCached(first0); useCB = true;
           res.writeHead(200, { 'Content-Type': 'audio/wav', 'Cache-Control': 'no-store' });
           res.write(probe);
           list = list.slice(1);
         } catch (e) {
+          ttsLog('FALLBACK online voices - studio unavailable: ' + (e && e.message));
           res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' });
         }
         for (const seg of list) {

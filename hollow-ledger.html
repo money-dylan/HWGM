@@ -1834,7 +1834,8 @@ function tok(n){ return getComputedStyle(document.documentElement).getPropertyVa
   }
   var ttsOn=store.ttvoice!==false;
   var vbtn=document.getElementById('tt-voice');
-  function vlabel(){ vbtn.textContent='voice: '+(ttsOn?'on':'off') }
+  function vlabel(){ vbtn.textContent='voice: '+(ttsOn?'on':'off')+(ttsOn&&window.__voiceSrc?' \u00b7 '+window.__voiceSrc:'') }
+  window.__vlabel=vlabel;
   vlabel();
   vbtn.addEventListener('click',function(){ ttsOn=!ttsOn; store.ttvoice=ttsOn; save(); vlabel();
     if(!ttsOn)stopSpeech(); });
@@ -3332,6 +3333,7 @@ function speakText(txt,btn,startAt){
       if(!alive(g)){ return }
       killAudio();
       var upcoming=fetchSeg(idx+1); fetchSeg(idx+2);
+      window.__voiceSrc=(b&&/wav/.test(b.type))?'studio':'online'; if(window.__vlabel)window.__vlabel();
       currentAudio=new Audio(URL.createObjectURL(b));
       currentAudio.onended=function(){ if(!alive(g))return; idx++; run(upcoming,g); };
       currentAudio.onerror=function(){ if(!alive(g))return; idx++; run(post({skip:idx,first:1}),g); };
@@ -3410,6 +3412,7 @@ function speakText(txt,btn,startAt){
 window.speakText=speakText; window.stopSpeech=stopSpeech;
 function browserSpeak(txt,btn){
   if(!synth)return;
+  window.__voiceSrc='browser'; if(window.__vlabel)window.__vlabel();
   synth.cancel();
   var base=parseFloat(document.getElementById('voicerate').value)||0.95;
   var v=voices().find(function(x){return x.name===document.getElementById('voicesel').value});
