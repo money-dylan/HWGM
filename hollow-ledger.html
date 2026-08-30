@@ -2605,6 +2605,7 @@ window.openSetup=function(firstRun){
   box.innerHTML='<h3>'+(firstRun?'Before the first page':'The Game Master')+'</h3>'
     +'<p class="tiny">The Game Master needs an API key of your own \u2014 one from <b>console.anthropic.com</b> (API keys, then \u201ccreate key\u201d). Each turn costs a few cents on your account; the meter in the top bar keeps count. The key stays on this computer, in the game folder.</p>'
     +'<label class="sl" for="su-key">API key</label><input type="password" id="su-key" placeholder="sk-ant-\u2026" autocomplete="off" spellcheck="false">'
+    +'<label class="sl" for="su-ws">Workspace id <span style="opacity:.65;font-size:.85em">(only if the meter says your key needs one; starts wrkspc_)</span></label><input type="text" id="su-ws" placeholder="usually left empty" autocomplete="off" spellcheck="false">'
     +'<label class="sl" for="su-model">Which model tells the story</label><select id="su-model"><option value="claude-sonnet-5">Sonnet 5 \u2014 recommended (about 2\u20133\u00a2 a turn)</option><option value="claude-opus-5">Opus 5 \u2014 richer, about five times the cost</option></select>'
     +'<label class="sl">Voices</label><ul class="voices" id="su-voices"><li>reading the room\u2026</li></ul>'
     +'<div class="setrow"><button type="button" class="dbtn" id="su-save">'+(firstRun?'Save and open the book':'Save')+'</button>'+(firstRun?'':'<button type="button" class="chip" id="su-x">close</button>')+'<span class="setmsg" id="su-msg"></span></div>';
@@ -2614,6 +2615,7 @@ window.openSetup=function(firstRun){
   fetch('/setup',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){
     if(s.hasKey)box.querySelector('#su-key').placeholder='a key ending in \u2026'+s.keyTail+' is set; paste another to replace it';
     box.querySelector('#su-model').value=s.model||'claude-sonnet-5';
+    if(s.workspace)box.querySelector('#su-ws').placeholder='a workspace id is set; paste another to replace it';
     var v=box.querySelector('#su-voices'); v.innerHTML='';
     var li=function(t){ var l=document.createElement('li'); l.innerHTML=t; v.appendChild(l) };
     if(s.voicePack)li('<b>Studio voices</b> \u2014 the voice pack is installed; the cast speaks in their own voices.');
@@ -2624,7 +2626,7 @@ window.openSetup=function(firstRun){
   box.querySelector('#su-save').addEventListener('click',function(){
     var msg=box.querySelector('#su-msg'); msg.textContent='saving\u2026';
     var key=box.querySelector('#su-key').value.trim();
-    fetch('/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key||undefined,model:box.querySelector('#su-model').value})})
+    fetch('/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key||undefined,model:box.querySelector('#su-model').value,workspace:box.querySelector('#su-ws').value.trim()})})
       .then(function(r){return r.json()}).then(function(j){
         if(!j.ok){ msg.textContent=j.error||'could not save'; return }
         msg.textContent='saved \u2014 the Game Master is waking';
@@ -2655,7 +2657,7 @@ window.openSetup=function(firstRun){
     var cents=Math.round((s.lastCost||0)*100), total=(s.spent||0).toFixed(2);
     if(s.job){ el.textContent='GM: '+String(s.job).replace(/^closing /,'closing ')+'…'; el.className='abgm on busy'; el.title='the Game Master is writing the closed chapter’s tales and settling its facts'; last=s; return }
     if(s.error&&!s.busy){
-      var why=/401|authentication/i.test(s.error)?'the API key was refused':/credit|billing|insufficient/i.test(s.error)?'the account is out of credit':/429|rate/i.test(s.error)?'rate limited, retrying':/overloaded|529|5dd/.test(s.error)?'the service is busy, retrying':'trouble';
+      var why=/workspace-id|workspace id/i.test(s.error)?'the key needs its workspace id':/401|authentication/i.test(s.error)?'the API key was refused':/credit|billing|insufficient/i.test(s.error)?'the account is out of credit':/429|rate/i.test(s.error)?'rate limited, retrying':/overloaded|529|5dd/.test(s.error)?'the service is busy, retrying':'trouble';
       el.textContent='GM: '+why+' · click';
       el.className='abgm err'; el.title=String(s.error).slice(0,300); last=s; return;
     }
