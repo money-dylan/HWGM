@@ -57,7 +57,9 @@ fs.writeFileSync(path.join(out, 'start.bat'), String.raw`@echo off
 setlocal
 title The Hollow Ledger
 cd /d "%~dp0"
+echo [%date% %time%] start.bat launched from "%~dp0" > start.log 2>nul
 if not exist "%~dp0server.js" (
+  echo [%date% %time%] server.js not found - run from inside the zip >> start.log 2>nul
   echo.
   echo   It looks like the game is still inside the zip file.
   echo   Close this window, RIGHT-CLICK the zip, choose "Extract All...",
@@ -68,23 +70,38 @@ if not exist "%~dp0server.js" (
 )
 set "NODE=%~dp0node\node.exe"
 if not exist "%NODE%" set "NODE=node"
+echo [%date% %time%] using node: %NODE% >> start.log
 if "%NODE%"=="node" (
   where node >nul 2>nul
   if not %errorlevel%==0 (
+    echo [%date% %time%] node.js not installed and none bundled >> start.log
     echo The Hollow Ledger needs Node.js ^(free^): https://nodejs.org  - install it, then run start.bat again.
     pause
     exit /b 1
   )
 )
+"%NODE%" -v >> start.log 2>&1
+if not %errorlevel%==0 (
+  echo [%date% %time%] node.exe would not run - possibly blocked by Windows or antivirus >> start.log
+  echo.
+  echo   The game's engine was blocked from running - usually Windows marking a
+  echo   downloaded file, or an antivirus. Right-click the ZIP you downloaded,
+  echo   choose Properties, tick "Unblock", click OK, and extract it again.
+  echo.
+  pause
+  exit /b 1
+)
+echo [%date% %time%] starting the table server >> start.log
 echo The table is opening at http://localhost:7439
 echo Keep this window open while you play. Close it to stop.
 echo.
 start "" http://localhost:7439
 "%NODE%" server.js 2>server-error.log
+echo [%date% %time%] table server stopped >> start.log
 echo.
 echo The table server stopped.
 if exist server-error.log type server-error.log
-echo If that was unexpected, send server-error.log to whoever gave you the game.
+echo If that was unexpected, send start.log and server-error.log to whoever gave you the game.
 pause
 `);
 fs.writeFileSync(path.join(out, 'start.sh'), `#!/bin/sh
