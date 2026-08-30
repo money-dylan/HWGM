@@ -48,7 +48,11 @@ function briefSections() {
 const ENGINE_RULES = `# HOW YOU FILE A TURN (engine)
 You are the Game Master of The Hollow Ledger, a solo Hogwarts tabletop game set in 1932 under Headmaster Dippet — original story, book-accurate world, never overlapping the novels. You answer ONE player message at a time by calling the file_turn tool exactly once (plus, when relevant, write_tales or update_continuity). Never answer in plain text.
 
-Turn text rules: second person, the fireside narrator voice from the voice bible; mood cues [plain] [soft] [warm] [tense] [grand] [excited] [afraid] and speaker cues like [nell] [posy] [idris] [dumbledore] [lady] [rooke] [odette] [mum] [dad] [captain]... before quoted dialogue; ~150–300 words for an ordinary turn; end on the player's move. Never write the player's own words, thoughts or actions. Capitalise mechanic terms only where a rule is genuinely being named.
+Turn text rules: second person, the fireside narrator voice from the voice bible; mood cues [plain] [soft] [warm] [tense] [grand] [excited] [afraid] and speaker cues like [nell] [posy] [idris] [dumbledore] [lady] [rooke] [odette] [mum] [dad] [captain]... before quoted dialogue; ~150–300 words for an ordinary turn; end on the player's move. Never write the player's own words, thoughts or actions - and NEVER open a turn by re-describing what the player just typed. They were there; it is on the table already. Begin with what their action CHANGES: what answers, what resists, what happens next. Depict the manner of their action only when a roll's outcome makes the manner matter. Capitalise mechanic terms only where a rule is genuinely being named.
+
+TABLE PREFERENCES: when the player asks you to change how you run the table - style, pacing, how much you narrate, what you repeat, the voice - obey from that turn on, and in the same turn record it with update_continuity as "TABLE PREFERENCE - <the request, in one line>" so it binds every future session. The continuity file's TABLE PREFERENCE lines are standing orders: re-read and honor them every turn.
+
+THE CAST: when a named character properly enters the story (spoken with, likely to recur) and has no card, add them with update_cast in the same turn - short id, real description in the third person, no invented history. Amend an existing dossier only when the table itself changed a fact (a new title, an injury, a revealed name); quotes only from words actually said at this table. The People tab is the player's view of who they know - keep it true.
 
 SHAPE OF THE TEXT (this matters as much as the words): short paragraphs separated by blank lines - one to four sentences each, never one long block. A single-sentence beat may stand alone as its own paragraph ("Nothing else shifts. Not the book. Not the cloak. Not the tin."). Each character's spoken line gets its own paragraph, with its cue. When a roll resolves, state the result plainly in its own paragraph - what the number earned (a HOUSE POINT, a FLOURISH) and what it costs - then, if a flourish is owed, one paragraph offering concrete ways to spend it here and now, with the player free to name another. Close with the hand-back on its own line: "What do you do, <name>?" (or a variation) whenever the scene is waiting on the player.
 
@@ -132,6 +136,17 @@ const TOOLS = [
     input_schema: { type: 'object', additionalProperties: false, required: ['tales'], properties: { tales: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['id', 'cat', 'title', 'sub', 'chapter', 'text'], properties: { id: { type: 'string', description: 'unique, lowercase, prefixed for this campaign' }, cat: { type: 'string' }, title: { type: 'string' }, sub: { type: 'string' }, chapter: { type: 'string' }, text: { type: 'string', description: 'the tale with cue tags, 400–700 words' } } } } } } },
   { name: 'update_continuity', description: 'Append a dated note to this campaign\'s continuity file when an established fact changes.', strict: true,
     input_schema: { type: 'object', additionalProperties: false, required: ['note'], properties: { note: { type: 'string' } } } },
+  { name: 'update_cast', description: 'Add a person to the cast (their card appears on the People tab) or amend an existing dossier. Only for people who genuinely entered the story at this table; amendments are conservative and never rewrite history.', strict: true,
+    input_schema: { type: 'object', additionalProperties: false, required: ['people'], properties: { people: { type: 'array', items: { type: 'object', additionalProperties: false,
+      required: ['id', 'name', 'house', 'role', 'desc', 'quote', 'bond', 'met'], properties: {
+        id: { type: 'string', description: 'short lowercase id, e.g. "odette"' },
+        name: { type: ['string', 'null'], description: 'full name; required when adding someone new' },
+        house: { type: ['string', 'null'] },
+        role: { type: ['string', 'null'], description: 'one line: what they are in the world, e.g. "Prefect \u00b7 Hufflepuff \u00b7 counts heads"' },
+        desc: { type: ['string', 'null'], description: 'the dossier text; third person, present facts only, no shared-past claims the table did not play' },
+        quote: { type: ['string', 'null'], description: 'ONLY words actually spoken at this table' },
+        bond: { type: ['string', 'null'], description: 'sheet key for their bond hearts, e.g. "bond_Odette"; usually null' },
+        met: { type: ['boolean', 'null'] } } } } } } },
 ];
 
 /* ---------------- filing ---------------- */
@@ -176,6 +191,30 @@ function updateContinuity(slot, note) {
 
 
 function prevChapterLabel(openedLabel) { const ch = readJson(path.join(dir, 'chat.json'), {}).chapters || []; const i = ch.findIndex(c => c.label === openedLabel); return i > 0 ? ch[i - 1].label : (ch.length >= 2 ? ch[ch.length - 2].label : (ch[0] ? ch[0].label : 'the chapter')); }
+function updateCast(slot, input) {
+  const cf = path.join(dir, 'characters.json');
+  const cj = readJson(cf, { people: [] });
+  const done = [];
+  for (const p of (input.people || [])) {
+    const id = String(p.id || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if (!id) continue;
+    let ex = cj.people.find(x => x.id === id);
+    if (!ex) {
+      if (!p.name || !p.desc) { done.push(id + ' REFUSED: a new person needs name and desc'); continue; }
+      ex = { id: id, name: p.name, met: true };
+      cj.people.push(ex);
+      done.push('added ' + id);
+    } else done.push('amended ' + id + ' (' + ['name','house','role','desc','quote','bond'].filter(k => typeof p[k] === 'string' && p[k]).join(', ') + ')');
+    for (const k of ['name', 'house', 'role', 'desc', 'quote', 'bond']) if (typeof p[k] === 'string' && p[k]) ex[k] = p[k];
+    if (typeof p.met === 'boolean') ex.met = p.met;
+  }
+  if (!done.length) return 'nothing to change';
+  if (DRY) { log('DRY cast: ' + done.join('; ')); return 'dry: ' + done.join('; '); }
+  fs.writeFileSync(cf, JSON.stringify(cj, null, 2));
+  try { fs.appendFileSync(path.join(dir, contFile(slot)), '\n- [engine ' + new Date().toISOString().slice(0, 10) + '] cast: ' + done.join('; ') + '\n'); } catch (err) {}
+  return done.join('; ');
+}
+
 /* ---------------- one turn ---------------- */
 async function answer(slot, playerText) {
   STATUS.busy = true; STATUS.slot = slot; STATUS.lastPlayer = playerText; STATUS.error = null; const t0 = Date.now();
@@ -219,6 +258,7 @@ async function answerInner(slot, playerText) {
         if (u.name === 'file_turn' && filed) { out = 'a turn is already filed for this message - do not file another; you are done'; } else if (u.name === 'file_turn') { out = fileTurn(slot, u.input); filed = filed || out === 'filed' || out === 'dry'; if (u.input.chapter && out === 'filed') { const opened = u.input.chapter; setTimeout(() => chapterClose(slot, prevChapterLabel(opened)).catch(() => {}), 1500); log('chapter opened: ' + opened + ' - closing the last one in the background'); } log('turn:', String(u.input.text).replace(/\s+/g, ' ').slice(0, DRY ? 4000 : 160)); if (DRY) log('bookkeeping:', JSON.stringify({ ask: u.input.ask, set: u.input.set, mem: u.input.mem, journal: u.input.journal, done: u.input.done, missed: u.input.missed, meet: u.input.meet, scene: u.input.scene, track: u.input.track, amb: u.input.amb, chapter: u.input.chapter, meta: u.input.meta })); } if (DRY) { const tt = String(u.input.text); log('shape: ' + tt.split(/\n\s*\n/).length + ' paragraphs, ' + tt.length + ' chars'); fs.writeFileSync(path.join(dir, 'engine-dry-turn.txt'), tt); }
         else if (u.name === 'write_tales') out = writeTales(slot, u.input);
         else if (u.name === 'update_continuity') out = updateContinuity(slot, u.input.note);
+        else if (u.name === 'update_cast') out = updateCast(slot, u.input);
       } catch (e) { out = 'error: ' + e.message; }
       results.push({ type: 'tool_result', tool_use_id: u.id, content: out });
     }
@@ -274,6 +314,7 @@ async function chapterClose(slot, closedLabel) {
         let o = 'ok';
         try {
           if (u.name === 'write_tales') { o = writeTales(slot, u.input); did.push('tales: ' + u.input.tales.map(t => t.id).join(', ')); if (DRY) log('DRY tales:', JSON.stringify(u.input.tales.map(t => ({ id: t.id, cat: t.cat, title: t.title, chapter: t.chapter, words: String(t.text).split(/\s+/).length })))); }
+          else if (u.name === 'update_cast') { o = updateCast(slot, u.input); did.push('cast'); if (DRY) log('DRY cast (job): ' + o); }
           else if (u.name === 'update_continuity') { o = updateContinuity(slot, u.input.note); did.push('continuity'); if (DRY) log('DRY continuity:', u.input.note.slice(0, 1200)); }
           else o = 'not in this job';
         } catch (err) { o = 'error: ' + err.message; }
