@@ -192,6 +192,9 @@ Without the pack, the game uses an online narrator, and the browser's voice when
   }
 }
 
+// a build must start with a clean diary: no logs or engine state from testing it here
+for (const f of ['engine.log', 'engine-crash.log', 'engine-state.json', 'start.log', 'server-error.log', 'server.log', path.join('voice', 'tts.log')]) { try { fs.unlinkSync(path.join(out, f)); } catch (e) {} }
+
 // --installer: wrap the built folder in a one-file Windows setup (Inno Setup; per-user, no admin).
 if (process.argv.includes('--installer')) {
   const iscc = [path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Inno Setup 6', 'ISCC.exe'), 'C:/Program Files (x86)/Inno Setup 6/ISCC.exe'].find(p => fs.existsSync(p));
