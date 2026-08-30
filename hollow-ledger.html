@@ -1628,7 +1628,7 @@ a.chip{text-decoration:none}
 <script>
 (function(){
 "use strict";
-var IS_LOCAL=/^(localhost$|127\.|192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(location.hostname);
+var IS_LOCAL=location.protocol==='http:';   // served by the table server (any hostname: localhost, a LAN address, the machine's name) - not a file or a hosted copy
 var store={};
 try{ store=JSON.parse(localStorage.getItem('hollow-ledger-v1'))||{} }catch(e){ store={} }
 function save(){ try{ localStorage.setItem('hollow-ledger-v1',JSON.stringify(store)) }catch(e){} }
