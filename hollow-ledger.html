@@ -1298,6 +1298,8 @@ mark.bookhit{background:var(--gilt);color:var(--ground);padding:0 .1em;border-ra
 @keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(140,47,42,.35)}50%{box-shadow:0 0 0 7px rgba(140,47,42,0)}}
 @media (prefers-reduced-motion: reduce){.micbtn.listening{animation:none}}
 .chatplate{aspect-ratio:900/300;margin:.3rem 0 .6rem;border-radius:3px}
+.msg-gm.aside{opacity:.85;border-left-color:var(--line2);background:var(--panel2);font-size:.95em}
+.msg-you.aside{opacity:.85}
 .msg-gm.quill{opacity:.75;font-style:italic}
 .quill .dots span{animation:dotpulse 1.4s infinite;display:inline-block}
 .quill .dots span:nth-child(2){animation-delay:.35s}
@@ -1725,7 +1727,7 @@ function tok(n){ return getComputedStyle(document.documentElement).getPropertyVa
     if(sb){ if(feed.scene){ sb.textContent=feed.scene; sb.style.display='' } else sb.style.display='none' }
     var nearBottom=(logEl.scrollHeight-logEl.scrollTop-logEl.clientHeight)<160;
     logEl.innerHTML='';
-    var items=[]; feed.log.forEach(function(m,i){ if(!m.meta && !/^\(pacing:/.test(m.text||''))items.push({m:m,idx:i}) });
+    var items=[]; feed.log.forEach(function(m,i){ if(!/^\(pacing:/.test(m.text||''))items.push({m:m,idx:i}) });
     pending.forEach(function(m){ items.push({m:{who:'you',text:m.text,waiting:true},idx:1e9}) });
     var all=items.map(function(x){ return x.m });
     var bounds=(feed.chapters||[]).slice().sort(function(a,b){ return a.start-b.start });
@@ -1761,9 +1763,9 @@ function tok(n){ return getComputedStyle(document.documentElement).getPropertyVa
       var ch=chapAt(it.idx), lab=ch?ch.label:null;
       if(lab!==curLabel){ curLabel=lab; startGroup(ch) }
       var b=document.createElement('div');
-      b.className=(m.who==='you'?('msg-you'+(m.waiting?' waiting':'')):'msg-gm');
+      b.className=(m.who==='you'?('msg-you'+(m.waiting?' waiting':'')):'msg-gm')+(m.meta?' aside':'');
       var s=document.createElement('span'); s.className='who';
-      s.textContent=(m.who==='you'?(store.name||'You'):'The Game Master');
+      s.textContent=(m.who==='you'?(store.name||'You'):(m.meta?'The Game Master · aside':'The Game Master'));
       b.appendChild(s);
       var imgs=window.__charimgs||{};
       if(m.who==='you'&&imgs.__player){ var pa=document.createElement('img'); pa.src=imgs.__player; pa.alt=''; s.insertBefore(pa,s.firstChild); }
