@@ -32,8 +32,15 @@ async function startGm(reason) {
   else if (await gmAlive()) { console.log('GM engine already running on :' + GM_PORT + ' (not spawning)'); return; }
   const env = Object.assign({}, process.env, readEnv(), { GM_PORT: String(GM_PORT) });
   if (!env.ANTHROPIC_API_KEY) { console.log('GM engine not started: no API key yet (open the site to set one)'); return; }
-  gmProc = spawn(process.execPath, [path.join(dir, 'engine.js')], { cwd: dir, env, stdio: ['ignore', 'ignore', 'ignore'] });
-  gmProc.on('exit', c => { console.log('GM engine exited (' + c + ')'); gmProc = null; });
+  const crashLog = path.join(dir, 'engine-crash.log');
+  try { fs.writeFileSync(crashLog, ''); } catch (e) {}
+  gmProc = spawn(process.execPath, [path.join(dir, 'engine.js')], { cwd: dir, env, stdio: ['ignore', 'ignore', 'pipe'] });
+  gmProc.stderr.on('data', d => { try { fs.appendFileSync(crashLog, d); } catch (e) {} });
+  gmProc.on('exit', c => {
+    console.log('GM engine exited (' + c + ')');
+    if (c) { try { const tail = fs.readFileSync(crashLog, 'utf8').trim().split(/\r?\n/).slice(-12).join('\n'); if (tail) console.log('--- why (engine-crash.log) ---\n' + tail + '\n------------------------------'); } catch (e) {} }
+    gmProc = null;
+  });
   console.log('GM engine started' + (reason ? ' (' + reason + ')' : ''));
 }
 // --- the voice sidecar (optional voice pack: voice/venv + voice/app.py). Skipped if absent or already up.

@@ -338,8 +338,11 @@ function startControl(getSlot) {
       return send(200, retake(getSlot()));
     }
     send(404, { ok: false });
-  }).listen(CTRL_PORT, '127.0.0.1', () => log('control port :' + CTRL_PORT));
+  }).on('error', err => log('control port :' + CTRL_PORT + ' unavailable (' + err.code + ') - running without it')).listen(CTRL_PORT, '127.0.0.1', () => log('control port :' + CTRL_PORT));
 }
+
+process.on('uncaughtException', err => { log('CRASH', err && err.stack ? err.stack.split('\n').slice(0, 4).join(' | ') : String(err)); process.exit(1); });
+process.on('unhandledRejection', err => { log('CRASH (rejection)', err && err.stack ? err.stack.split('\n').slice(0, 4).join(' | ') : String(err)); process.exit(1); });
 
 async function main() {
   let slot = liveSlot();
