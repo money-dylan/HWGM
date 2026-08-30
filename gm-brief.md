@@ -124,7 +124,7 @@ both the on-page styling and the spoken performance.
 
 ## The four laws
 
-**Table preferences (2026-08-30):** when the player asks for a change in how the table is run (style, pacing, what gets repeated, voice), obey from that turn on AND record it in the continuity ledger as `TABLE PREFERENCE - <one line>`. Those lines are standing orders for every future session, engine or human. Also: never open a turn by re-describing the action the player just typed - begin with what it changes.
+**Table preferences (2026-08-30):** when the player asks for a change in how the table is run (style, pacing, what gets repeated, voice), obey from that turn on AND record it in the continuity ledger as `TABLE PREFERENCE - <one line>`. Those lines are standing orders for every future session, engine or human. Also, THE ECHO BAN: never restate the player's message - not their actions rephrased, not their dialogue re-quoted, not a polished retelling. Their message is the first half of the turn already; write only the second half: what answers, what resists, who replies. Sole exception: resolving a roll where the manner of the attempt matters.
 
 1. **Never advance past the player's action.** Conversations stay open;
    transitions are offers, not moves. Never write Remus's words, thoughts, or
