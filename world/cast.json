@@ -1,0 +1,498 @@
+{
+  "people": [
+    {
+      "id": "nell",
+      "name": "Nell Underhill",
+      "house": "Hufflepuff",
+      "role": "first year",
+      "color": "#7fb79a",
+      "met": false,
+      "bond": "bond_Nell",
+      "desc": "Wizard father, Muggle mother — a lifetime spent explaining each world to the other. Shy about herself, fluent about everything else, and the small cool front she puts up never quite holds. Two summers at the Magical Menagerie; owns no animal of her own.",
+      "quote": "",
+      "stats": {
+        "Magic": 0,
+        "Wits": 2,
+        "Nerve": 1,
+        "Charm": 0,
+        "Insight": 3,
+        "Luck": 1
+      },
+      "secret": "She counts the words people say to her on bad days, and some days the count is very low, and she has decided that is fine, and it is not.",
+      "abilities": [
+        {
+          "h": 1,
+          "name": "THE SAVED SEAT",
+          "desc": "once in a school week, a quiet hour with her restores 1 Luck. Nothing needs saying."
+        },
+        {
+          "h": 2,
+          "name": "ANIMAL SENSE",
+          "desc": "Edge on Insight with beasts, birds and ghosts when she is beside you."
+        },
+        {
+          "h": 3,
+          "name": "THE RIGHT SENTENCE",
+          "desc": "once in a school week, she says the thing that lands: reroll a failed Charm check made in her presence."
+        },
+        {
+          "h": 4,
+          "name": "NOT TELLING ANYONE",
+          "desc": "a secret given to Nell is safe absolutely — no charm, no threat, and no hungry book can take it from her."
+        }
+      ]
+    },
+    {
+      "id": "posy",
+      "name": "Posy Fenwick",
+      "house": "Hufflepuff",
+      "role": "first year",
+      "color": "#d9a441",
+      "met": false,
+      "bond": "bond_Posy",
+      "desc": "Brown bob losing its war against two butterfly clips; permanent ink on her nose. Muggle-born, a printer's daughter from Croydon. Keeps a notebook of questions — eighty-seven and counting — and is not embarrassed about the notebook.",
+      "quote": "",
+      "stats": {
+        "Magic": 1,
+        "Wits": 2,
+        "Nerve": 2,
+        "Charm": 3,
+        "Insight": 1,
+        "Luck": 0
+      },
+      "secret": "Question sixty-four, underlined twice, never asked aloud: what happens to a wizard who is actually bad at magic? She is terrified it will turn out to be about her.",
+      "abilities": [
+        {
+          "h": 1,
+          "name": "THE NOTEBOOK",
+          "desc": "once in a school week, she has already asked: learn one true thing about any student in the school."
+        },
+        {
+          "h": 2,
+          "name": "VERY GOOD AT FINDING PEOPLE",
+          "desc": "once in a school week, she finds anyone in the castle. It is the books. They make her tall."
+        },
+        {
+          "h": 3,
+          "name": "EIGHTY-ONE QUESTIONS",
+          "desc": "Edge on any research or library Wits check made with her help."
+        },
+        {
+          "h": 4,
+          "name": "GIVE THEM HELL, POPPET",
+          "desc": "once in a school week, her loud loyalty cancels one social calamity outright - the room ends up laughing with you."
+        }
+      ]
+    },
+    {
+      "id": "idris",
+      "name": "Idris Bellchant",
+      "house": "Ravenclaw",
+      "role": "first year",
+      "color": "#39527e",
+      "met": false,
+      "bond": "bond_Idris",
+      "desc": "Small, dark-haired, ink on three fingers. Twelfth mapmaker of a family with eleven honest failures on the walls. Speaks rarely, correct annoyingly often.",
+      "quote": "",
+      "stats": {
+        "Magic": 1,
+        "Wits": 3,
+        "Nerve": 0,
+        "Charm": -1,
+        "Insight": 2,
+        "Luck": 1
+      },
+      "secret": "He has never once heard his father say a map was good. He is drawing the twelfth to be finished, not to be right, and he does not yet know there is a difference.",
+      "abilities": [
+        {
+          "h": 1,
+          "name": "THE GROUND FLOOR",
+          "desc": "you are never lost on any floor he has mapped for you — navigation there simply succeeds."
+        },
+        {
+          "h": 2,
+          "name": "THE TWELFTH MAP",
+          "desc": "once in a school week, ask him a route: the fastest unwatched way between any two mapped places."
+        },
+        {
+          "h": 3,
+          "name": "MARGIN QUESTIONS",
+          "desc": "Edge on Investigate downtime taken with him — he maps where answers live."
+        },
+        {
+          "h": 4,
+          "name": "INTERMITTENT PASSAGE",
+          "desc": "once in a school week he produces a shortcut that should not exist. It is not always there. It is there for you."
+        }
+      ]
+    },
+    {
+      "id": "screech",
+      "name": "Screech",
+      "house": "",
+      "role": "great horned owl · hers by choice",
+      "color": "#8fa8d8",
+      "met": false,
+      "desc": "A hen great horned owl, storm-grey, imported and unimpressed. Refused eleven customers in fourteen months, then chose a boy through a bookshop window. Beat the Hogwarts Express to Scotland by an hour.",
+      "quote": "",
+      "bond": "bond_Screech",
+      "secret": "If ever you are in true danger — anywhere, any hour, called or not — she will know, and she will come. This is not a power. It is a decision she made in a shop window, and she does not revisit her decisions.",
+      "abilities": [
+        {
+          "h": 1,
+          "name": "THE GAVEL",
+          "desc": "her judgment of a stranger is never wrong. Ask what she makes of someone; the answer is true."
+        },
+        {
+          "h": 2,
+          "name": "POST FLIGHT",
+          "desc": "she carries a letter to anyone, anywhere - as often as you ask. But she is a bird, not a floo: a delivery takes real flying time (London and back is the better part of two days), and she carries one errand at a time. While she is away, she is away."
+        },
+        {
+          "h": 3,
+          "name": "NIGHT WATCH",
+          "desc": "set her to guard a thing, a door, or a person, and nothing touches it before morning. Until this opens, she guards what SHE chooses."
+        },
+        {
+          "h": 4,
+          "name": "LEDGER-WARD",
+          "desc": "she breaks the cold thing’s hold on you - reliably, at the first sign, whenever she is present. Until this opens, she saves you when she can, and she may not always be in the room."
+        }
+      ]
+    },
+    {
+      "id": "castle",
+      "name": "Hogwarts Castle",
+      "house": "",
+      "role": "eleven hundred years old",
+      "color": "#c9a45c",
+      "met": false,
+      "bond": "bond_Castle",
+      "desc": "A hundred and forty-two staircases held up by habit and grandeur; doors that are walls on Thursdays; a corridor that is four feet longer at night. Eleven Bellchants have failed to map it because it is not a building that holds still — it is something older, wearing a building.",
+      "quote": "",
+      "abilities": [
+        {
+          "h": 1,
+          "name": "THE HONEST STAIR",
+          "desc": "going to meals or lessons, you are simply never lost — turn enough corners and breakfast finds you. The castle has never once misplaced a first-year in their first fortnight. Not in eleven centuries."
+        },
+        {
+          "h": 2,
+          "name": "THE PEAR THAT GIGGLES",
+          "desc": "the kitchens know you. Tickle the pear at any hour: warmth, cocoa, something on a plate, and a hundred and four souls who never ask why you came."
+        },
+        {
+          "h": 3,
+          "name": "THE ROOM THAT ISN’T ALWAYS",
+          "desc": "once in a school week, a door that was not there yesterday opens on a room holding exactly what you currently need most — within reason; the castle has a budget. It will not be there tomorrow."
+        },
+        {
+          "h": 4,
+          "name": "THE CASTLE’S FAVOUR",
+          "desc": "once in a school week, the building takes your side: a staircase swings where none should reach, a wall forgets to be a wall, a portrait passes word ahead. You arrive where you could not possibly arrive."
+        }
+      ],
+      "secret": "The castle is not neutral in what is coming. It sealed that room itself, four hundred years ago, and it has felt the key come home the way you feel a splinter. It cannot act — buildings act slowly, in inches and Thursdays — but it has already chosen its side. Its side is the children. It always was."
+    },
+    {
+      "id": "rooke",
+      "name": "Lucinda Rooke",
+      "house": "Slytherin",
+      "role": "first year · rival, probably",
+      "color": "#2c5c46",
+      "met": false,
+      "bond": "bond_Rooke",
+      "desc": "Silver-fair plaits pinned up round her head like a coronet, not a strand loose by the end of a day. Pale, fine-boned, tall for eleven; stands the way people stand in portraits - chin level, hands still. Pewter-grey eyes that do the noticing her face does not bother to; a small mouth that spends no expressions it can keep. Robes new and fitted exactly; everything about her looks placed. Eleven generations of Rookes, every one watching her through portrait varnish.",
+      "quote": "",
+      "stats": {
+        "Magic": 2,
+        "Wits": 2,
+        "Nerve": 1,
+        "Charm": 2,
+        "Insight": 1,
+        "Luck": -1
+      },
+      "secret": "Eleven generations, and she has read every one of their school records, and she knows exactly which cousins are spoken of and which are skipped, and she has decided she would rather be hated than skipped.",
+      "abilities": [
+        {
+          "h": 1,
+          "name": "ACCEPTABLE",
+          "desc": "she stops filing you under asset. Conversations become real."
+        },
+        {
+          "h": 2,
+          "name": "THE ROOKE ACCOUNT",
+          "desc": "once in a school week, true information from channels a Muggle-raised boy cannot reach - society, families, money."
+        },
+        {
+          "h": 3,
+          "name": "ELEVEN GENERATIONS",
+          "desc": "Edge on any check involving old families, heirlooms or etiquette, with her coaching."
+        },
+        {
+          "h": 4,
+          "name": "THE UNSKIPPED",
+          "desc": "she stands with you publicly, whatever it costs her. And it will cost her."
+        }
+      ]
+    },
+    {
+      "id": "mum",
+      "name": "Vera Mooney",
+      "house": "Slytherin, once",
+      "role": "",
+      "color": "#5e3f6e",
+      "met": false,
+      "desc": "Keeps her wand in the biscuit tin. Reads seams and lies with equal ease. Found nothing on the brass weight — no maker, no charm, no curse — and knew that nothing was the loudest answer possible. Goes very still when thestrals are mentioned. Twice now.",
+      "quote": ""
+    },
+    {
+      "id": "dad",
+      "name": "Tom Mooney",
+      "house": "",
+      "role": "fireman",
+      "color": "#b56a4f",
+      "met": false,
+      "desc": "Comes home smelling of smoke and cold air. Asked the only question about Hogwarts nobody at Hogwarts has ever thought to ask: what's the fire safety like in a castle full of candles?",
+      "quote": ""
+    },
+    {
+      "id": "maisie",
+      "name": "Maisie Mooney",
+      "house": "",
+      "role": "eight",
+      "color": "#c97a8a",
+      "met": false,
+      "desc": "Long black hair that escapes any ribbon within the hour, grey-blue eyes behind round wire glasses a size too big for her face, freckles across the nose, and two front teeth missing, which gives every serious pronouncement a whistle. Small for eight, quick, watchful in a way that is not shy - she keeps tallies. Entirely unbearable, deeply beloved. Fell in love with Screech in record time. Owed one letter a week, BY OWL.",
+      "quote": ""
+    },
+    {
+      "id": "dumbledore",
+      "name": "Albus Dumbledore",
+      "house": "",
+      "role": "Professor of Transfiguration",
+      "color": "#6f5a9e",
+      "met": false,
+      "desc": "Auburn-haired at fifty-one, midnight-blue robes, the teacher other teachers watch when something goes wrong.",
+      "quote": ""
+    },
+    {
+      "id": "greylady",
+      "name": "The Grey Lady",
+      "house": "Ravenclaw",
+      "role": "ghost of the tower",
+      "color": "#9aa3b5",
+      "met": false,
+      "desc": "Four hundred and six years dead; grey as the lake before rain.",
+      "quote": ""
+    },
+    {
+      "id": "whisp",
+      "name": "Madam Elowen Whisp",
+      "house": "",
+      "role": "librarian · twelfth of her line",
+      "color": "#666a75",
+      "met": false,
+      "desc": "Small, straight-backed, grey. Closed the Restricted Section to half the school this year and watched the doors, not the students, while it was announced. The Hat has sat on the head of every librarian this school has had — and it learned things.",
+      "quote": ""
+    },
+    {
+      "id": "odette",
+      "name": "Odette Marsh",
+      "house": "Gryffindor",
+      "role": "prefect · fifth year",
+      "color": "#a04435",
+      "met": false,
+      "desc": "One shoe permanently missing. Counted her first-years, got the right number, knew it was wrong anyway — and left bread and butter by the fire with a note instead of a lecture. So far.",
+      "quote": ""
+    },
+    {
+      "id": "ogg",
+      "name": "Ogg",
+      "house": "",
+      "role": "gamekeeper",
+      "color": "#5c7a4a",
+      "met": false,
+      "desc": "Beard like a hedge in winter. Feeds the thestral herd by hand at five every morning, all weathers. Knows which students can see them the moment they arrive, and never says. The old mare is called Nan, and she is owed an apple.",
+      "quote": ""
+    },
+    {
+      "id": "elias",
+      "name": "Elias Parkin",
+      "house": "Gryffindor",
+      "role": "first year · dorm-mate",
+      "color": "#c9a45c",
+      "met": false,
+      "desc": "Sat on a plate at the feast out of pure relief. Sleeps in his shoes.",
+      "quote": ""
+    },
+    {
+      "id": "fen",
+      "name": "Fen Appleby",
+      "house": "Hufflepuff",
+      "role": "first year",
+      "color": "#d0b06a",
+      "met": false,
+      "desc": "Round-faced, seasick on boats, sick at least once on the train, rallied magnificently. Remember that face — it will matter at strange moments.",
+      "quote": "",
+      "stats": {
+        "Magic": 0,
+        "Wits": 0,
+        "Nerve": 3,
+        "Charm": 1,
+        "Insight": 1,
+        "Luck": 2
+      },
+      "secret": "He is not clumsy. He is fast and frightened at the same time, which looks identical. One day this year, the fast will matter more than the frightened.",
+      "abilities": [
+        {
+          "h": 1,
+          "name": "THE STRANGEST MOMENTS",
+          "desc": "once in a school week, Fen Appleby turns up at exactly the right wrong moment. He always will."
+        }
+      ]
+    },
+    {
+      "id": "ollivander",
+      "name": "Ollivander",
+      "house": "",
+      "role": "wandmaker",
+      "color": "#8a734a",
+      "met": false,
+      "desc": "Silvered seventies; his son Garrick is away at school and will keep the shop after him. Once bowed, in a wet field, to a horse nobody could see.",
+      "quote": ""
+    },
+    {
+      "id": "vekk",
+      "name": "Vekk",
+      "house": "",
+      "role": "goblin · Gringotts teller",
+      "color": "#7a6a4a",
+      "met": false,
+      "desc": "Half-moon spectacles and the expression of someone who has seen ten thousand first-years and been impressed by four.",
+      "quote": ""
+    },
+    {
+      "id": "dippet",
+      "name": "Armando Dippet",
+      "house": "",
+      "role": "Headmaster",
+      "color": "#8f8265",
+      "met": false,
+      "desc": "Old and thin and wispy-haired, kindly in the way of a man who has been kindly so long it has worn grooves. Announced the Restricted Section closure with unusual steel in his voice.",
+      "quote": ""
+    },
+    {
+      "id": "peeves",
+      "name": "Peeves",
+      "house": "",
+      "role": "poltergeist",
+      "color": "#b5652a",
+      "met": false,
+      "hint": "You have not crossed his path yet. You will. Everybody does."
+    },
+    {
+      "id": "sedge",
+      "name": "?",
+      "house": "",
+      "role": "someone at the Slytherin table",
+      "color": "#44585a",
+      "met": false,
+      "hint": "A fifth-year prefect who reads at meals. You have not spoken."
+    },
+    {
+      "id": "burke",
+      "name": "?",
+      "house": "",
+      "role": "the man in the grey cloak",
+      "color": "#3a3440",
+      "met": false,
+      "hint": "Buttons like jackdaw eyes. He cannot come in. He is not gone."
+    },
+    {
+      "id": "hesper",
+      "name": "H.B.",
+      "house": "",
+      "role": "",
+      "color": "#7c1f23",
+      "met": false,
+      "hint": "Tiny, brilliant handwriting, one sentence unfinished. Somebody knew her."
+    },
+    {
+      "id": "binns",
+      "name": "Professor Binns",
+      "house": "",
+      "role": "History of Magic",
+      "color": "#8f8f83",
+      "met": false,
+      "hint": "A voice like a distant lawnmower, so they say. First lesson soon."
+    },
+    {
+      "id": "slughorn",
+      "name": "Professor Slughorn",
+      "house": "",
+      "role": "Potions master",
+      "color": "#4a6a55",
+      "met": false,
+      "hint": "Young for a Potions master. Collects people, so be collectible or be invisible."
+    },
+    {
+      "id": "merrythought",
+      "name": "Professor Merrythought",
+      "house": "",
+      "role": "Defence Against the Dark Arts",
+      "color": "#5a4a6a",
+      "met": false,
+      "hint": "Has taught Defence longer than your parents have been alive."
+    },
+    {
+      "id": "nan",
+      "name": "?",
+      "house": "",
+      "role": "something in the forest",
+      "color": "#43505c",
+      "met": false,
+      "hint": "Ollivander said: bring her an apple. She will know you."
+    },
+    {
+      "id": "beery",
+      "name": "Professor Beery",
+      "house": "",
+      "role": "Herbology",
+      "color": "#4f7a3a",
+      "met": false,
+      "desc": "",
+      "quote": ""
+    },
+    {
+      "id": "pike",
+      "name": "Professor Pike",
+      "house": "",
+      "role": "Charms",
+      "color": "#3f6f8f",
+      "met": false,
+      "desc": "Charms, third floor. Not unkind. Simply unpersuaded that feeling has anything to do with it. Teaches by repetition against a brass metronome and learns no names for the first fortnight - you are your row and your seat.",
+      "quote": ""
+    },
+    {
+      "id": "winterbourne",
+      "name": "Professor Winterbourne",
+      "house": "",
+      "role": "Astronomy",
+      "color": "#2f3f7a",
+      "met": false,
+      "desc": "",
+      "quote": ""
+    },
+    {
+      "id": "pye",
+      "name": "Madam Pye",
+      "house": "",
+      "role": "flying instructor",
+      "color": "#8a5a2a",
+      "met": false,
+      "desc": "",
+      "quote": ""
+    }
+  ]
+}
