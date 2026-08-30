@@ -30,7 +30,7 @@ function read(p) { try { return fs.readFileSync(p, 'utf8'); } catch (e) { return
 function readJson(p, d) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { return d; } }
 
 const STATUS = { slot: null, model: MODEL, job: null, hasKey: !!process.env.ANTHROPIC_API_KEY, busy: false, lastPlayer: null, lastCost: 0, lastMs: 0, lastAt: null, error: null };
-const client = new Anthropic({ defaultHeaders: process.env.ANTHROPIC_WORKSPACE_ID ? { 'anthropic-workspace-id': process.env.ANTHROPIC_WORKSPACE_ID } : {} });
+const client = new Anthropic({ defaultHeaders: Object.assign({ 'anthropic-beta': 'extended-cache-ttl-2025-04-11' }, process.env.ANTHROPIC_WORKSPACE_ID ? { 'anthropic-workspace-id': process.env.ANTHROPIC_WORKSPACE_ID } : {}) });
 
 /* ---------------- the world kit (stable, cached) ---------------- */
 function stripHtml(s) { return s.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim(); }
@@ -107,13 +107,14 @@ function buildScene(slot, window) {
   const cast = readJson(path.join(dir, 'characters.json'), { people: [] }).people;
   const castList = cast.map(p => p.id + ' = ' + p.name + (p.met ? '' : ' (not yet met)')).join('; ');
   const stable = [ENGINE_RULES, briefSections(), read(path.join(dir, 'voice-bible.md')), read(path.join(dir, 'roll-doctrine.md')), '# THE RULEBOOK (digest)\n' + rulesDigest()].join('\n\n---\n\n');
-  const campaign = ['# CONTINUITY — this campaign\n' + read(path.join(dir, contFile(slot))), '# CAST ids\n' + castList, sheetSummary(sheet), '# CHARACTER MEMORY — people in this scene\n' + (memoriesFor(slot, recentText) || '(none matched)'), '# SCENE\n' + (chat.scene || '')].join('\n\n---\n\n');
+  const semi = ['# CONTINUITY — this campaign\n' + read(path.join(dir, contFile(slot))), '# CAST ids\n' + castList].join('\n\n---\n\n');
+  const volatile = [sheetSummary(sheet), '# CHARACTER MEMORY — people in this scene\n' + (memoriesFor(slot, recentText) || '(none matched)'), '# SCENE\n' + (chat.scene || '')].join('\n\n---\n\n');
   const messages = recent.map(e => ({ role: e.who === 'you' ? 'user' : 'assistant', content: String(e.text) }));
   // the API needs alternating roles starting with user; merge neighbours
   const merged = [];
   for (const m of messages) { const last = merged[merged.length - 1]; if (last && last.role === m.role) last.content += '\n\n' + m.content; else merged.push({ ...m }); }
   while (merged.length && merged[0].role !== 'user') merged.shift();
-  return { stable, campaign, messages: merged };
+  return { stable, semi, volatile, messages: merged };
 }
 
 /* ---------------- tools ---------------- */
@@ -225,9 +226,10 @@ async function answerInner(slot, playerText) {
   const history = scene.messages.slice();
   // the record may already end on the player's own message (gm.js files it first); merge
   if (history.length && history[history.length - 1].role === 'user') { playerText = history.pop().content + '\n\n' + playerText; }
-  // cache the history prefix: only the newest message changes between turns
-  if (history.length) { const last = history[history.length - 1]; last.content = [{ type: 'text', text: String(last.content), cache_control: { type: 'ephemeral' } }]; }
-  const messages = history.concat([{ role: 'user', content: playerText }]);
+  // cache the history prefix (1h): only the newest message changes between turns, and pauses don't evict it
+  if (history.length) { const last = history[history.length - 1]; last.content = [{ type: 'text', text: String(last.content), cache_control: { type: 'ephemeral', ttl: '1h' } }]; }
+  const turnState = '[CAMPAIGN STATE — reference for you, not the player speaking]\n\n' + scene.volatile + '\n\n[THE PLAYER, NOW]\n';
+  const messages = history.concat([{ role: 'user', content: turnState + playerText }]);
   let filed = false, usage = { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 };
   for (let hop = 0; hop < 4; hop++) {
     const r = await client.messages.create({
@@ -237,8 +239,8 @@ async function answerInner(slot, playerText) {
       tools: TOOLS,
       tool_choice: hop === 0 ? { type: 'any' } : { type: 'auto' },
       system: [
-        { type: 'text', text: scene.stable, cache_control: { type: 'ephemeral' } },
-        { type: 'text', text: scene.campaign, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: scene.stable, cache_control: { type: 'ephemeral', ttl: '1h' } },
+        { type: 'text', text: scene.semi, cache_control: { type: 'ephemeral', ttl: '1h' } },
       ],
       messages,
     });
@@ -296,14 +298,14 @@ async function chapterClose(slot, closedLabel) {
       + '1) write_tales: the tales that chapter earned, by the "Generating tales" rules in the brief - two to four, each true to what the player actually did and said, each in one character\'s voice or the narrator\'s, chapter field = "' + w.label + '". Do not retell scenes the player watched; tell what they could not see. '
       + '2) update_continuity: one compact block headed "' + w.label + ' - settled" with: the in-world date and hour at the close; standing appointments still open; facts that must hold from here on; and any earlier note this chapter made stale. Never invent - if the turns above do not say it, leave it out.)';
     const history = scene.messages.slice();
-    if (history.length) { const last = history[history.length - 1]; last.content = [{ type: 'text', text: String(last.content), cache_control: { type: 'ephemeral' } }]; }
-    const messages = history.concat([{ role: 'user', content: ask }]);
+    if (history.length) { const last = history[history.length - 1]; last.content = [{ type: 'text', text: String(last.content), cache_control: { type: 'ephemeral', ttl: '1h' } }]; }
+    const messages = history.concat([{ role: 'user', content: '[CAMPAIGN STATE]\n\n' + scene.volatile + '\n\n' + ask }]);
     let usage = { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 }, did = [];
     for (let hop = 0; hop < 3; hop++) {
       const r = await client.messages.create({
         model: MODEL, max_tokens: 8000, thinking: { type: 'adaptive' }, output_config: { effort: EFFORT },
         tools: TOOLS.filter(t => t.name !== 'file_turn'), tool_choice: hop === 0 ? { type: 'any' } : { type: 'auto' },
-        system: [{ type: 'text', text: scene.stable, cache_control: { type: 'ephemeral' } }, { type: 'text', text: scene.campaign, cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: scene.stable, cache_control: { type: 'ephemeral', ttl: '1h' } }, { type: 'text', text: scene.semi, cache_control: { type: 'ephemeral', ttl: '1h' } }],
         messages,
       });
       usage.in += r.usage.input_tokens || 0; usage.out += r.usage.output_tokens || 0; usage.cacheRead += r.usage.cache_read_input_tokens || 0; usage.cacheWrite += r.usage.cache_creation_input_tokens || 0;
@@ -408,7 +410,7 @@ async function main() {
     total += await count('voice bible', read(path.join(dir, 'voice-bible.md')));
     total += await count('roll doctrine', read(path.join(dir, 'roll-doctrine.md')));
     total += await count('rulebook digest', rulesDigest());
-    total += await count('continuity', read(path.join(dir, contFile(slot))));
+    total += await count('continuity + cast (1h block)', read(path.join(dir, contFile(slot))));
     const chat = readJson(path.join(dir, 'chat.json'), { log: [] });
     const recentText = chat.log.filter(e => !e.meta).slice(-8).map(e => e.text).join(' ');
     memoriesFor.matched = [];
