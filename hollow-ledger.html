@@ -1540,7 +1540,7 @@ a.chip{text-decoration:none}
 .chapfold[open] summary{border-bottom:1px solid var(--line2)}
 .chapfold .msg-gm,.chapfold .msg-you{margin-left:.5rem;margin-right:.5rem}
 .campwrap{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center}
-.campbox{width:min(520px,92vw);background:var(--ground);border:1px solid rgba(214,183,124,.35);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:1.2rem 1.4rem 1.1rem}
+.campbox{max-height:88vh;overflow-y:auto;overscroll-behavior:contain;width:min(520px,92vw);background:var(--ground);border:1px solid rgba(214,183,124,.35);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:1.2rem 1.4rem 1.1rem}
 .campbox h3{font-family:"IM Fell English",Georgia,serif;color:var(--seal);margin:0 0 .2rem;font-size:1.5rem}
 .campbox .tiny{margin:0 0 .8rem}
 .camprow{display:flex;align-items:center;gap:.8rem;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line2);border-radius:5px;padding:.6rem .8rem;margin:.35rem 0;cursor:pointer;color:var(--ink);font:inherit}
@@ -2635,7 +2635,7 @@ window.openSetup=function(firstRun){
 (function(){
   // first run: no key -> settings; no campaign -> the shelf
   var q=location.search; var vm=q.match(/[?&]view=([a-z]+)/); if(vm){ setTimeout(function(){ var tb=document.querySelector('[data-tab="'+vm[1]+'"]'); if(tb)tb.click(); var cm=q.match(/[?&]card=(\d+)/); if(cm)setTimeout(function(){ var cs=document.querySelectorAll('#journal .jc'); if(cs[cm[1]])cs[cm[1]].click() },600) },300) } if(/[?&]open=setup/.test(q)){ window.openSetup(/first/.test(q)); return }
-  if(/[?&]open=shelf/.test(q)&&typeof window.openCampaigns==='function'){ window.openCampaigns(); return }
+  if(/[?&]open=shelf/.test(q)&&typeof window.openCampaigns==='function'){ window.openCampaigns(); if(q.indexOf('wiz=1')>-1)setTimeout(function(){ var b=document.getElementById('campwiz'); if(b)b.click() },400); return }
   fetch('/setup',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){
     if(!s.hasKey)window.openSetup(true);
     else if(!s.live&&typeof window.openCampaigns==='function')window.openCampaigns();
