@@ -192,5 +192,17 @@ Without the pack, the game uses an online narrator, and the browser's voice when
   }
 }
 
+// --installer: wrap the built folder in a one-file Windows setup (Inno Setup; per-user, no admin).
+if (process.argv.includes('--installer')) {
+  const iscc = [path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Inno Setup 6', 'ISCC.exe'), 'C:/Program Files (x86)/Inno Setup 6/ISCC.exe'].find(p => fs.existsSync(p));
+  if (!iscc) { console.log('--installer needs Inno Setup 6 (jrsoftware.org); ISCC.exe not found'); process.exit(1); }
+  const forAt2 = process.argv.indexOf('--for');
+  const outName = 'The Hollow Ledger Setup' + (forAt2 > -1 ? ' - ' + process.argv[forAt2 + 1] : '');
+  const c = require('child_process').spawnSync(iscc, ['/Qp', '/DSrcDir=' + out, '/DOutName=' + outName, path.join(dir, 'installer.iss')], { cwd: dir, encoding: 'utf8' });
+  if (c.status !== 0) { console.log('installer build failed:\n' + (c.stdout || '') + (c.stderr || '')); process.exit(1); }
+  const exe = path.join(dir, 'dist', outName + '.exe');
+  console.log('installer built: ' + exe + ' (' + (fs.statSync(exe).size / 1048576).toFixed(1) + ' MB)');
+}
+
 const size = (function tot(p) { let s = 0; for (const f of fs.readdirSync(p)) { const q = path.join(p, f); s += fs.statSync(q).isDirectory() ? tot(q) : fs.statSync(q).size; } return s; })(out);
 console.log('release built: ' + out + ' (' + (size / 1048576).toFixed(1) + ' MB)');
