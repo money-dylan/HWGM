@@ -606,6 +606,9 @@ http.createServer((req, res) => {
       res.end(data);
     }
   });
+}).on('error', e => {
+  if (e.code === 'EADDRINUSE') { console.log('The Hollow Ledger is already running - find its window, or just open http://localhost:' + PORT + ' in your browser.'); process.exit(0); }
+  throw e;
 }).listen(PORT, () => {
   console.log('The Hollow Ledger is open at http://localhost:' + PORT); startVoice(); startGm();
   // keep the Game Master alive: if nothing answers on GM_PORT and a key exists, start it again

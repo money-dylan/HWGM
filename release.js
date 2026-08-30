@@ -52,11 +52,21 @@ const nodeExe = path.join(dir, 'tools', 'node-win-x64', 'node.exe');
 if (WITH_NODE) { if (!fs.existsSync(nodeExe)) { console.log('no tools/node-win-x64/node.exe to bundle'); process.exit(1); } cp(nodeExe, path.join(out, 'node', 'node.exe')); console.log('bundled node.exe ' + process.version); }
 
 // the launcher
-fs.writeFileSync(path.join(out, 'start.bat'), `@echo off
+fs.writeFileSync(path.join(out, 'start.bat'), String.raw`@echo off
+setlocal
 title The Hollow Ledger
 cd /d "%~dp0"
-set NODE=node
-if exist "%~dp0node\node.exe" set NODE=%~dp0node\node.exe
+if not exist "%~dp0server.js" (
+  echo.
+  echo   It looks like the game is still inside the zip file.
+  echo   Close this window, RIGHT-CLICK the zip, choose "Extract All...",
+  echo   open the extracted folder, and run start.bat from there.
+  echo.
+  pause
+  exit /b 1
+)
+set "NODE=%~dp0node\node.exe"
+if not exist "%NODE%" set "NODE=node"
 if "%NODE%"=="node" (
   where node >nul 2>nul
   if not %errorlevel%==0 (
@@ -65,9 +75,15 @@ if "%NODE%"=="node" (
     exit /b 1
   )
 )
-echo Opening The Hollow Ledger...
+echo The table is opening at http://localhost:7439
+echo Keep this window open while you play. Close it to stop.
+echo.
 start "" http://localhost:7439
-"%NODE%" server.js
+"%NODE%" server.js 2>server-error.log
+echo.
+echo The table server stopped.
+if exist server-error.log type server-error.log
+echo If that was unexpected, send server-error.log to whoever gave you the game.
 pause
 `);
 fs.writeFileSync(path.join(out, 'start.sh'), `#!/bin/sh
