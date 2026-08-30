@@ -6,7 +6,8 @@ const fs = require('fs');
 const path = require('path');
 const dir = __dirname;
 const VERSION = require('./package.json').version;
-const outArg = process.argv.slice(2).find(a => !a.startsWith('--'));
+const VALFLAGS = ['--for', '--key', '--campaign'];
+const outArg = process.argv.slice(2).find((a, i, all) => !a.startsWith('--') && !VALFLAGS.includes(all[i - 1]));
 // --brief: regenerate ./gm-brief.md, the public copy of the GM brief
 if (process.argv.includes('--brief')) { require('child_process').spawnSync(process.execPath, [path.join(dir, 'tools', 'brief.js')], { stdio: 'inherit' }); process.exit(0); }
 const out = path.resolve(outArg || path.join(dir, 'dist', 'hollow-ledger-' + VERSION));
@@ -142,6 +143,37 @@ graphics card with 8 GB or more and about 6 GB of disk.
 
 Without the pack, the game uses an online narrator, and the browser's voice when offline.
 `);
+
+// --for <name>: a copy made for one person - their key already set, their campaign already on the table.
+// --key mine copies the key (and workspace id) from this install's .env; --key sk-ant-... uses that key.
+// --campaign <file.hlcampaign.zip> imports the campaign and leaves it live, so the game opens mid-story.
+{
+  const av = process.argv;
+  const forAt = av.indexOf('--for');
+  if (forAt > -1) {
+    const who = av[forAt + 1] || 'player';
+    const keyAt = av.indexOf('--key'), campAt = av.indexOf('--campaign');
+    const devEnv = {}; try { for (const l of fs.readFileSync(path.join(dir, '.env'), 'utf8').split(/\r?\n/)) { const m = l.match(/^([A-Z_]+)=(.*)$/); if (m) devEnv[m[1]] = m[2].trim(); } } catch (e) {}
+    let key = keyAt > -1 ? av[keyAt + 1] : 'mine';
+    if (key === 'mine') key = devEnv.ANTHROPIC_API_KEY || '';
+    if (!key) { console.log('--for needs a key: pass --key sk-ant-... or have one in .env'); process.exit(1); }
+    const lines = ['ANTHROPIC_API_KEY=' + key];
+    if (key === devEnv.ANTHROPIC_API_KEY && devEnv.ANTHROPIC_WORKSPACE_ID) lines.push('ANTHROPIC_WORKSPACE_ID=' + devEnv.ANTHROPIC_WORKSPACE_ID);
+    lines.push('GM_MODEL=' + (devEnv.GM_MODEL || 'claude-sonnet-5'));
+    fs.writeFileSync(path.join(out, '.env'), lines.join('\n') + '\n');
+    console.log('personalized for ' + who + ': key set' + (lines.length > 2 ? ' (with workspace id)' : ''));
+    if (campAt > -1) {
+      const camp = path.resolve(av[campAt + 1]);
+      const sp = (args) => require('child_process').spawnSync(process.execPath, ['save.js', ...args], { cwd: out, encoding: 'utf8' });
+      const imp = sp(['import', camp]);
+      const m = (imp.stdout || '').match(/as slot "([^"]+)"/);
+      if (!m) { console.log('campaign import failed: ' + (imp.stdout || '') + (imp.stderr || '')); process.exit(1); }
+      const ld = sp(['load', m[1]]);
+      if (!/is now the live campaign/.test(ld.stdout || '')) { console.log('campaign load failed: ' + (ld.stdout || '') + (ld.stderr || '')); process.exit(1); }
+      console.log('campaign "' + m[1] + '" imported and set live - the game opens mid-story');
+    }
+  }
+}
 
 const size = (function tot(p) { let s = 0; for (const f of fs.readdirSync(p)) { const q = path.join(p, f); s += fs.statSync(q).isDirectory() ? tot(q) : fs.statSync(q).size; } return s; })(out);
 console.log('release built: ' + out + ' (' + (size / 1048576).toFixed(1) + ' MB)');
