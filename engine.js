@@ -76,7 +76,7 @@ Bonds: ${bonds || 'none yet'}
 Objectives:\n${sh.jpromise || '(none)'}
 Open questions:\n${sh.jthreads || '(none)'}
 Satchel:\n${sh.inv || '(nothing listed)'}
-Milestones (last lines):\n${String(sh.jmarks || '').split('\n').slice(-6).join('\n')}
+People (the player's own Case File notes):\n${String(sh.jpeople || '').split('\n').slice(0, 14).join('\n')}\nMilestones (last lines):\n${String(sh.jmarks || '').split('\n').slice(-6).join('\n')}
 Clue file (last lines):\n${String(sh.jclues || '').split('\n').slice(-5).join('\n')}`;
 }
 function memoriesFor(slot, recentText) {
