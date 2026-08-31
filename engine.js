@@ -93,7 +93,7 @@ function memoriesFor(slot, recentText) {
       // a memory file can be long: keep its headings/physical notes and the most recent 30 event lines
       const lines = read(path.join(mdir, f)).split(/\r?\n/);
       const events = lines.filter(l => /^- /.test(l)), rest = lines.filter(l => !/^- /.test(l) && l.trim());
-      const trimmed = rest.concat(events.length > 30 ? ['- (' + (events.length - 30) + ' earlier events omitted)'].concat(events.slice(-30)) : events).join('\n');
+      const trimmed = rest.concat(events.length > 15 ? ['- (' + (events.length - 15) + ' earlier events omitted)'].concat(events.slice(-15)) : events).join('\n');
       out.push('### ' + (p ? p.name : id) + ' (' + id + ')' + String.fromCharCode(10) + trimmed);
       memoriesFor.matched = (memoriesFor.matched || []).concat([id]);
     }
