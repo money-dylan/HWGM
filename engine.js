@@ -21,6 +21,7 @@ for (const l of (fs.existsSync(path.join(dir, '.env')) ? fs.readFileSync(path.jo
 const MODEL = process.env.GM_MODEL || 'claude-sonnet-5';
 const EFFORT = process.env.GM_EFFORT || 'medium';
 const CTRL_PORT = parseInt(process.env.GM_PORT || '7442', 10);
+const THINKING = /haiku/.test(MODEL) ? undefined : { type: 'adaptive' };   // haiku has no adaptive thinking
 const DRY = process.argv.includes('--dry');
 const ONCE = process.argv.includes('--once');
 const LOG = path.join(dir, 'engine.log');
@@ -103,7 +104,7 @@ function buildScene(slot, window) {
   const chat = readJson(path.join(dir, 'chat.json'), { log: [] });
   const sheet = readJson(path.join(dir, 'sheet.json'), {});
   const recent = window ? window.filter(e => !e.meta) : chat.log.filter(e => !e.meta).slice(-30);
-  const recentText = recent.slice(-8).map(e => e.text).join(' ');
+  const recentText = recent.slice(-4).map(e => e.text).join(' ');
   const cast = readJson(path.join(dir, 'characters.json'), { people: [] }).people;
   const castList = cast.map(p => p.id + ' = ' + p.name + (p.met ? '' : ' (not yet met)')).join('; ');
   const stable = [ENGINE_RULES, briefSections(), read(path.join(dir, 'voice-bible.md')), read(path.join(dir, 'roll-doctrine.md')), '# THE RULEBOOK (digest)\n' + rulesDigest()].join('\n\n---\n\n');
@@ -149,6 +150,9 @@ const TOOLS = [
         bond: { type: ['string', 'null'], description: 'sheet key for their bond hearts, e.g. "bond_Odette"; usually null' },
         met: { type: ['boolean', 'null'] } } } } } } },
 ];
+
+// haiku cannot compile our strict schemas into a grammar; it gets the same tools unstrict
+const TOOLSET = /haiku/.test(MODEL) ? TOOLS.map(t => Object.assign({}, t, { strict: false })) : TOOLS;
 
 /* ---------------- filing ---------------- */
 function fileTurn(slot, t) {
@@ -234,9 +238,9 @@ async function answerInner(slot, playerText) {
   for (let hop = 0; hop < 4; hop++) {
     const r = await client.messages.create({
       model: MODEL, max_tokens: 6000,
-      thinking: { type: 'adaptive' },
-      output_config: { effort: EFFORT },
-      tools: TOOLS,
+      ...(THINKING ? { thinking: THINKING } : {}),
+      ...(THINKING ? { output_config: { effort: EFFORT } } : {}),
+      tools: TOOLSET,
       tool_choice: hop === 0 ? { type: 'any' } : { type: 'auto' },
       system: [
         { type: 'text', text: scene.stable, cache_control: { type: 'ephemeral', ttl: '1h' } },
@@ -267,7 +271,7 @@ async function answerInner(slot, playerText) {
     messages.push({ role: 'user', content: results });
     if (r.stop_reason === 'end_turn') break;
   }
-  const PRICE = /opus/.test(MODEL) ? { in: 5, read: 0.5, write: 6.25, out: 25 } : { in: 2, read: 0.2, write: 2.5, out: 10 };
+  const PRICE = /opus/.test(MODEL) ? { in: 5, read: 0.5, write: 10, out: 25 } : /haiku/.test(MODEL) ? { in: 1, read: 0.1, write: 2, out: 5 } : { in: 2, read: 0.2, write: 4, out: 10 };   // write = 1h cache rate
   const cost = (usage.in * PRICE.in + usage.cacheRead * PRICE.read + usage.cacheWrite * PRICE.write + usage.out * PRICE.out) / 1e6;
   STATUS.lastCost = cost; STATUS.lastAt = new Date().toISOString();
   log(`usage in ${usage.in} (cache read ${usage.cacheRead}, write ${usage.cacheWrite}) out ${usage.out} ≈ $${cost.toFixed(3)}`);
@@ -303,8 +307,8 @@ async function chapterClose(slot, closedLabel) {
     let usage = { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 }, did = [];
     for (let hop = 0; hop < 3; hop++) {
       const r = await client.messages.create({
-        model: MODEL, max_tokens: 8000, thinking: { type: 'adaptive' }, output_config: { effort: EFFORT },
-        tools: TOOLS.filter(t => t.name !== 'file_turn'), tool_choice: hop === 0 ? { type: 'any' } : { type: 'auto' },
+        model: MODEL, max_tokens: 8000, ...(THINKING ? { thinking: THINKING } : {}), ...(THINKING ? { output_config: { effort: EFFORT } } : {}),
+        tools: TOOLSET.filter(t => t.name !== 'file_turn'), tool_choice: hop === 0 ? { type: 'any' } : { type: 'auto' },
         system: [{ type: 'text', text: scene.stable, cache_control: { type: 'ephemeral', ttl: '1h' } }, { type: 'text', text: scene.semi, cache_control: { type: 'ephemeral', ttl: '1h' } }],
         messages,
       });
@@ -325,7 +329,7 @@ async function chapterClose(slot, closedLabel) {
       messages.push({ role: 'user', content: results });
       if (r.stop_reason === 'end_turn') break;
     }
-    const PRICE = /opus/.test(MODEL) ? { in: 5, read: 0.5, write: 6.25, out: 25 } : { in: 2, read: 0.2, write: 2.5, out: 10 };
+    const PRICE = /opus/.test(MODEL) ? { in: 5, read: 0.5, write: 10, out: 25 } : /haiku/.test(MODEL) ? { in: 1, read: 0.1, write: 2, out: 5 } : { in: 2, read: 0.2, write: 4, out: 10 };   // write = 1h cache rate
     const cost = (usage.in * PRICE.in + usage.cacheRead * PRICE.read + usage.cacheWrite * PRICE.write + usage.out * PRICE.out) / 1e6;
     STATUS.lastCost = cost; STATUS.lastAt = new Date().toISOString();
     log('chapter close "' + w.label + '": ' + (did.join('; ') || 'nothing written') + ' - in ' + usage.in + ' (cache read ' + usage.cacheRead + ', write ' + usage.cacheWrite + ') out ' + usage.out + ' ≈ $' + cost.toFixed(3));
