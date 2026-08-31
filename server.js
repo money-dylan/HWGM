@@ -39,7 +39,7 @@ async function startGm(reason) {
   gmProc.stderr.on('data', d => { try { fs.appendFileSync(crashLog, d); } catch (e) {} });
   gmProc.on('exit', c => {
     console.log('GM engine exited (' + c + ')');
-    if (c) { try { const tail = fs.readFileSync(crashLog, 'utf8').trim().split(/\r?\n/).slice(-12).join('\n'); if (tail) console.log('--- why (engine-crash.log) ---\n' + tail + '\n------------------------------'); } catch (e) {} }
+    if (c) { try { const all = fs.readFileSync(crashLog, 'utf8').trim().split(/\r?\n/).filter(Boolean); const tail = (all.length > 14 ? all.slice(0, 9).concat(['   ...'], all.slice(-4)) : all).join('\n'); if (tail) console.log('--- why (engine-crash.log) ---\n' + tail + '\n------------------------------'); } catch (e) {} }
     gmProc = null;
   });
   console.log('GM engine started' + (reason ? ' (' + reason + ')' : ''));

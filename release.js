@@ -44,6 +44,15 @@ cpDir(path.join(dir, 'voice', 'refs'), path.join(out, 'voice', 'refs'), f => /\.
 const nm = path.join(dir, 'node_modules');
 function cpTree(src, dst) { for (const f of fs.readdirSync(src)) { const p = path.join(src, f), q = path.join(dst, f); if (fs.statSync(p).isDirectory()) { fs.mkdirSync(q, { recursive: true }); cpTree(p, q); } else cp(p, q); } }
 if (fs.existsSync(nm)) { fs.mkdirSync(path.join(out, 'node_modules'), { recursive: true }); cpTree(nm, path.join(out, 'node_modules')); }
+// node_modules goes in as a single archive: 2,900 loose files is what a Windows unzip loses.
+// start.bat unpacks it on first run. The sentinel below is what the launcher checks for.
+if (fs.existsSync(path.join(out, 'node_modules'))) {
+  const tarExe = 'C:/Windows/System32/tar.exe';
+  const c = require('child_process').spawnSync(fs.existsSync(tarExe) ? tarExe : 'tar', ['-c', '-f', 'node_modules.tar', 'node_modules'], { cwd: out, encoding: 'utf8' });
+  if (c.status === 0) { fs.rmSync(path.join(out, 'node_modules'), { recursive: true, force: true }); console.log('node_modules packed (' + (fs.statSync(path.join(out, 'node_modules.tar')).size / 1048576).toFixed(1) + ' MB, unpacked on first run)'); }
+  else console.log('could not pack node_modules; shipping it loose: ' + (c.stderr || c.stdout));
+}
+
 // empty homes for what the player makes
 for (const d of ['saves', 'exports', 'charmem', 'voice/tales']) fs.mkdirSync(path.join(out, d), { recursive: true });
 
@@ -67,6 +76,34 @@ if not exist "%~dp0server.js" (
   echo.
   pause
   exit /b 1
+)
+rem --- the engine's libraries ship as one archive; unpack them once, and repair them if a file goes missing
+if not exist "%~dp0node_modules\@anthropic-ai\sdk\internal\utils\uuid.js" (
+  if exist "%~dp0node_modules.tar" (
+    echo Getting things ready. This happens once and takes a moment...
+    echo [%date% %time%] unpacking node_modules.tar >> start.log
+    if exist "%~dp0node_modules" rmdir /s /q "%~dp0node_modules"
+    rem bsdtar reads "C:foo" as a remote host, so unpack with plain relative paths
+    tar -xf node_modules.tar
+    if not exist "%~dp0node_modules\@anthropic-ai\sdk\internal\utils\uuid.js" (
+      echo [%date% %time%] unpack failed >> start.log
+      echo.
+      echo   Could not unpack the game's engine. This is usually antivirus.
+      echo   Try again, or allow this folder in your antivirus and re-run start.bat.
+      echo.
+      pause
+      exit /b 1
+    )
+    echo [%date% %time%] unpacked ok >> start.log
+  ) else (
+    echo [%date% %time%] node_modules incomplete and no archive to repair from >> start.log
+    echo.
+    echo   Some of the game's files are missing - the unzip did not finish.
+    echo   Delete this folder, then extract the zip again ^(right-click, Extract All^).
+    echo.
+    pause
+    exit /b 1
+  )
 )
 set "NODE=%~dp0node\node.exe"
 if not exist "%NODE%" set "NODE=node"
