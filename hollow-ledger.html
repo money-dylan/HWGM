@@ -290,7 +290,9 @@ a:hover{color:var(--seal)}
         <button type="button" class="chip pace" data-say="(pacing: I'm done with this beat — move it along)">▶ move it along</button>
         <button type="button" class="chip pace" data-say="(pacing: rewind — that went further than I wanted; take us back to just before that)">↩ rewind that</button>
       </div>
-      <div class="convo-in chat-in">
+      <div class="convo-in chat-in" style="position:relative">
+        <button type="button" class="chip" id="tt-cmds" title="table commands \u2014 tales, the People tab, recaps" aria-label="Table commands">\u2726</button>
+        <div id="cmdpop" hidden></div>
         <input type="text" id="tt-in" placeholder="What do you do?" aria-label="Your action" autocomplete="off">
         <button class="dbtn" id="tt-send" type="button">Send</button>
       </div>
@@ -1300,6 +1302,14 @@ mark.bookhit{background:var(--gilt);color:var(--ground);padding:0 .1em;border-ra
 .chatplate{aspect-ratio:900/300;margin:.3rem 0 .6rem;border-radius:3px}
 .msg-gm.aside{opacity:.85;border-left-color:var(--line2);background:var(--panel2);font-size:.95em}
 .msg-you.aside{opacity:.85}
+#tt-cmds{align-self:center;font-size:.95rem;padding:.3rem .55rem}
+#cmdpop{position:absolute;left:0;bottom:calc(100% + .45rem);z-index:60;background:var(--ground);border:1px solid rgba(214,183,124,.4);border-radius:6px;box-shadow:0 14px 40px rgba(0,0,0,.45);padding:.5rem;display:flex;flex-direction:column;gap:.25rem;min-width:310px}
+#cmdpop[hidden]{display:none}
+#cmdpop .ch{font-family:"IM Fell English SC",Georgia,serif;letter-spacing:.08em;font-size:.7rem;color:var(--faint);padding:.1rem .4rem}
+#cmdpop button{text-align:left;background:transparent;border:0;border-radius:4px;padding:.4rem .55rem;cursor:pointer;color:var(--ink);font:inherit;line-height:1.25}
+#cmdpop button:hover{background:var(--panel2)}
+#cmdpop button b{font-family:"IM Fell English SC",Georgia,serif;font-weight:400;letter-spacing:.05em;display:block}
+#cmdpop button span{font-size:.74rem;color:var(--faint)}
 .msg-gm.quill{opacity:.75;font-style:italic}
 .quill .dots span{animation:dotpulse 1.4s infinite;display:inline-block}
 .quill .dots span:nth-child(2){animation-delay:.35s}
@@ -2636,13 +2646,44 @@ window.openSetup=function(firstRun){
 };
 (function(){
   // first run: no key -> settings; no campaign -> the shelf
-  var q=location.search; var vm=q.match(/[?&]view=([a-z]+)/); if(vm){ setTimeout(function(){ var tb=document.querySelector('[data-tab="'+vm[1]+'"]'); if(tb)tb.click(); var cm=q.match(/[?&]card=(\d+)/); if(cm)setTimeout(function(){ var cs=document.querySelectorAll('#journal .jc'); if(cs[cm[1]])cs[cm[1]].click() },600) },300) } if(/[?&]open=setup/.test(q)){ window.openSetup(/first/.test(q)); return }
+  var q=location.search; if(/[?&]open=cmds/.test(q))setTimeout(function(){ var b=document.getElementById('tt-cmds'); if(b)b.click() },400); var vm=q.match(/[?&]view=([a-z]+)/); if(vm){ setTimeout(function(){ var tb=document.querySelector('[data-tab="'+vm[1]+'"]'); if(tb)tb.click(); var cm=q.match(/[?&]card=(\d+)/); if(cm)setTimeout(function(){ var cs=document.querySelectorAll('#journal .jc'); if(cs[cm[1]])cs[cm[1]].click() },600) },300) } if(/[?&]open=setup/.test(q)){ window.openSetup(/first/.test(q)); return }
   if(/[?&]open=shelf/.test(q)&&typeof window.openCampaigns==='function'){ window.openCampaigns(); if(q.indexOf('wiz=1')>-1)setTimeout(function(){ var b=document.getElementById('campwiz'); if(b)b.click() },400); return }
   fetch('/setup',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){
     if(!s.hasKey)window.openSetup(true);
     else if(!s.live&&typeof window.openCampaigns==='function')window.openCampaigns();
   }).catch(function(){});
   var meter=document.getElementById('ab-gm'); if(meter){ meter.style.cursor='pointer'; meter.title='the Game Master \u2014 click for settings'; meter.addEventListener('click',function(){ window.openSetup(false) }); }
+})();
+
+
+/* ---------- table commands: canned requests the Game Master knows how to honour ---------- */
+(function(){
+  var btn=document.getElementById('tt-cmds'), pop=document.getElementById('cmdpop');
+  if(!btn||!pop)return;
+  var CMDS=[
+    ['\u2712 Generate tales','new stories for the shelf, from recent play','generate tales for what we\u2019ve played since the last batch'],
+    ['\u263a Update the People tab','add missing cards, refresh dossiers','update the People tab: add anyone I\u2019ve properly met who has no card yet, and bring existing dossiers up to date with what has actually happened at this table \u2014 no invented history'],
+    ['\u2691 Where were we?','a short recap of where things stand','where did we leave off? give me a short recap: where I am, what\u2019s owed, what\u2019s open'],
+    ['\u2665 Repair my sheet','bonds, ties and counts re-checked','check my bonds, ties and sheet against the Case File and continuity, and refile anything missing or wrong'],
+    ['\u2726 End session','wrap up, tales if owed, continuity brought current','end session \u2014 close out gently, generate tales if any are owed, and bring continuity up to date']
+  ];
+  pop.innerHTML='<div class="ch">ask the Game Master to\u2026</div>';
+  CMDS.forEach(function(c){
+    var b=document.createElement('button'); b.type='button';
+    b.innerHTML='<b>'+c[0]+'</b><span>'+c[1]+'</span>';
+    b.addEventListener('click',function(){
+      pop.hidden=true;
+      if(window.__tableSay)window.__tableSay(c[2]);
+      else{ var i=document.getElementById('tt-in'); if(i){ i.value=c[2]; i.focus() } }
+    });
+    pop.appendChild(b);
+  });
+  var corr=document.createElement('button'); corr.type='button';
+  corr.innerHTML='<b>\u270e A correction\u2026</b><span>fix something the record got wrong (you finish the sentence)</span>';
+  corr.addEventListener('click',function(){ pop.hidden=true; var i=document.getElementById('tt-in'); if(i){ i.value='(correction: '; i.focus(); i.setSelectionRange(i.value.length,i.value.length) } });
+  pop.appendChild(corr);
+  btn.addEventListener('click',function(e){ e.stopPropagation(); pop.hidden=!pop.hidden });
+  document.addEventListener('click',function(e){ if(!pop.hidden&&!pop.contains(e.target)&&e.target!==btn)pop.hidden=true });
 })();
 
 /* ---------- the Game Master engine: status, cost, another take ---------- */
