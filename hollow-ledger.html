@@ -291,6 +291,7 @@ a:hover{color:var(--seal)}
         <button type="button" class="chip pace" data-say="(pacing: rewind — that went further than I wanted; take us back to just before that)">↩ rewind that</button>
       </div>
       <div class="convo-in chat-in" style="position:relative">
+        <button type="button" class="chip" id="tt-mode" title="who is speaking: your character in the story, or you to the Game Master" aria-label="Speaking mode">\u2694 in game</button>
         <button type="button" class="chip" id="tt-cmds" title="table commands \u2014 tales, the People tab, recaps" aria-label="Table commands">&#10022;</button>
         <div id="cmdpop" hidden></div>
         <input type="text" id="tt-in" placeholder="What do you do?" aria-label="Your action" autocomplete="off">
@@ -1935,9 +1936,12 @@ function tok(n){ return getComputedStyle(document.documentElement).getPropertyVa
     document.querySelectorAll('.chip.pace').forEach(function(b){
       b.addEventListener('click',function(){ sendText(b.dataset.say) });
     });
+    var OOC=false, modeBtn=document.getElementById('tt-mode');
+    function modePaint(){ if(!modeBtn)return; modeBtn.textContent=OOC?'\u270e to the GM':'\u2694 in game'; modeBtn.style.color=OOC?'var(--seal)':''; inEl.placeholder=OOC?'Ask or tell the Game Master (out of character)\u2026':(inEl.dataset.ph||'What do you do?'); }
+    if(modeBtn){ inEl.dataset.ph=inEl.placeholder; modeBtn.addEventListener('click',function(){ OOC=!OOC; modePaint(); inEl.focus() }); modePaint(); }
     sendEl.addEventListener('click',function(){
       var t=inEl.value.trim(); if(!t)return;
-      inEl.value=''; sendText(t);
+      inEl.value=''; sendText(OOC?('(to the GM: '+t+')'):t);
     });
     inEl.addEventListener('keydown',function(e){ if(e.key==='Enter')sendEl.click() });
 
@@ -2665,7 +2669,7 @@ window.openSetup=function(firstRun){
     ['\u263a Update the People tab','add missing cards, refresh dossiers','update the People tab: add anyone I\u2019ve properly met who has no card yet, and bring existing dossiers up to date with what has actually happened at this table \u2014 no invented history'],
     ['\u2691 Where were we?','a short recap of where things stand','where did we leave off? give me a short recap: where I am, what\u2019s owed, what\u2019s open'],
     ['\u2665 Repair my sheet','bonds, ties and counts re-checked','check my bonds, ties and sheet against the Case File and continuity, and refile anything missing or wrong'],
-    ['\u2726 End session','wrap up, tales if owed, continuity brought current','end session \u2014 close out gently, generate tales if any are owed, and bring continuity up to date']
+    ['\u2726 End session','wrap up, continuity brought current','end session \u2014 close out gently and bring continuity up to date']
   ];
   pop.innerHTML='<div class="ch">ask the Game Master to\u2026</div>';
   CMDS.forEach(function(c){

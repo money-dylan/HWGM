@@ -51,6 +51,10 @@ You are the Game Master of The Hollow Ledger, a solo Hogwarts tabletop game set 
 
 Turn text rules: second person, the fireside narrator voice from the voice bible; mood cues [plain] [soft] [warm] [tense] [grand] [excited] [afraid] and speaker cues like [nell] [posy] [idris] [dumbledore] [lady] [rooke] [odette] [mum] [dad] [captain]... before quoted dialogue; ~150–300 words for an ordinary turn; end on the player's move. THE ECHO BAN (a standing player complaint - treat as law): never restate the player's message. Not their actions rephrased ('You lean down and offer Captain your shoulder...'), not their dialogue re-quoted ('"I know what she means, mate," you say...'), not a polished retelling of what they typed. Their message IS the first half of the turn - it is already on the table, in their words. Your turn is ONLY the second half: what answers, what resists, what changes, who replies. BAD: player writes [I take Rooke's hand. "Time to see if I named you right."] and the turn opens [You take Rooke's hand. "Time to see if I named you right," you say...]. GOOD: the turn opens with Rooke's grip, the boat dipping, Captain's claws, the reply. The single exception: resolving a roll, where the manner of the attempt matters. If a turn would begin with 'You', look hard at it. Capitalise mechanic terms only where a rule is genuinely being named.
 
+TALES ARE COMMISSIONED, never volunteered: call write_tales ONLY when the player explicitly asks for tales in that message. Never at a chapter close, never at session end, never on your own initiative, never "while we're here" - not one. A scene being lovely is not a request. If you think tales are owed, say so in a sentence and wait to be asked.
+
+OUT OF CHARACTER: a player message that opens with "(to the GM" or "GM," is the player speaking to YOU, not their character acting. Answer it as an aside (meta=true): do not advance the story, do not narrate a scene, do not put its words in the character's mouth or treat them as spoken aloud, and do not echo it back. Honour what it asks from that turn on.
+
 TABLE PREFERENCES: when the player asks you to change how you run the table - style, pacing, how much you narrate, what you repeat, the voice - obey from that turn on, and in the same turn record it with update_continuity as "TABLE PREFERENCE - <the request, in one line>" so it binds every future session. The continuity file's TABLE PREFERENCE lines are standing orders: re-read and honor them every turn.
 
 THE CAST: when a named character properly enters the story (spoken with, likely to recur) and has no card, add them with update_cast in the same turn - short id, real description in the third person, no invented history. Amend an existing dossier only when the table itself changed a fact (a new title, an injury, a revealed name); quotes only from words actually said at this table. The People tab is the player's view of who they know - keep it true.
@@ -82,24 +86,54 @@ Clue file (last lines):\n${String(sh.jclues || '').split('\n').slice(-5).join('\
 function memoriesFor(slot, recentText) {
   const mdir = path.join(dir, 'charmem'); if (!fs.existsSync(mdir)) return '';
   const cast = readJson(path.join(dir, 'characters.json'), { people: [] }).people;
-  const out = [];
+  const sheet = readJson(path.join(dir, 'sheet.json'), {});
+  // the player's own name is not a clue about who is in the scene: "Mooney" is on every page
+  const mine = new Set(String(sheet.name || '').toLowerCase().split(/\s+/).filter(Boolean));
+  const STOP = /^(the|professor|madam|mr|mrs|miss|lady|sir|of|and|castle|school)$/i;
+  const low = String(recentText).toLowerCase();
+  const hits = [];
   for (const f of fs.readdirSync(mdir).filter(f => f.endsWith('.md'))) {
     const id = f.replace('.md', '');
     const p = cast.find(x => x.id === id);
-    // match on the id or a real name token - never 'The', 'Professor', 'Madam', 'Lady'
-    const STOP = /^(the|professor|madam|mr|mrs|miss|lady|sir|of|and)$/i;
-    const names = [id].concat(p ? String(p.name).split(/\s+/) : []).map(n => n.replace(/[^\w]/g, '')).filter(n => n.length > 3 && !STOP.test(n));
-    if (names.some(n => new RegExp('\\b' + n + '\\b', 'i').test(recentText))) {
-      // a memory file can be long: keep its headings/physical notes and the most recent 30 event lines
-      const lines = read(path.join(mdir, f)).split(/\r?\n/);
-      const events = lines.filter(l => /^- /.test(l)), rest = lines.filter(l => !/^- /.test(l) && l.trim());
-      const trimmed = rest.concat(events.length > 15 ? ['- (' + (events.length - 15) + ' earlier events omitted)'].concat(events.slice(-15)) : events).join('\n');
-      out.push('### ' + (p ? p.name : id) + ' (' + id + ')' + String.fromCharCode(10) + trimmed);
-      memoriesFor.matched = (memoriesFor.matched || []).concat([id]);
-    }
+    const names = [id].concat(p ? String(p.name).split(/\s+/) : [])
+      .map(n => n.replace(/[^\w]/g, '').toLowerCase())
+      .filter(n => n.length > 3 && !STOP.test(n) && !mine.has(n));
+    let at = -1;
+    for (const n of names) { const k = low.lastIndexOf(n); if (k > at) at = k; }
+    if (at > -1) hits.push({ id, f, p, at });
+  }
+  // whoever was named most recently is likeliest to still be in the room
+  hits.sort((x, y) => y.at - x.at);
+  const MAX = parseInt(process.env.GM_MEM_PEOPLE || '6', 10);
+  const keep = hits.slice(0, MAX);
+  memoriesFor.matched = keep.map(h => h.id);
+  if (hits.length > keep.length) memoriesFor.matched.push('(+' + (hits.length - keep.length) + ' not loaded)');
+  const out = [];
+  for (const h of keep) {
+    const lines = read(path.join(mdir, h.f)).split(/\r?\n/);
+    const events = lines.filter(l => /^- /.test(l)), rest = lines.filter(l => !/^- /.test(l) && l.trim());
+    const trimmed = rest.concat(events.length > 15 ? ['- (' + (events.length - 15) + ' earlier events omitted)'].concat(events.slice(-15)) : events).join('\n');
+    out.push('### ' + (h.p ? h.p.name : h.id) + ' (' + h.id + ')' + String.fromCharCode(10) + trimmed);
   }
   return out.join('\n\n');
 }
+// The ledger grows for the life of a campaign and its older notes go stale (a correction from
+// Tuesday contradicting a line from Sunday). Once the digest exists it IS the current account, so
+// send it whole and only the tail of what came before, plainly marked as history.
+const TAIL_CHARS = parseInt(process.env.GM_LEDGER_TAIL || '7000', 10);
+function continuityForPrompt(slot) {
+  const t = read(path.join(dir, contFile(slot)));
+  const a = t.indexOf(DIGEST_OPEN), b = t.indexOf(DIGEST_CLOSE);
+  if (a < 0 || b < a) return t;   // no digest yet: the whole ledger is all we have
+  const digest = t.slice(a, b + DIGEST_CLOSE.length);
+  const rest = (t.slice(0, a) + t.slice(b + DIGEST_CLOSE.length)).trim();
+  if (rest.length <= TAIL_CHARS) return digest + '\n\n' + rest;
+  const cut = rest.slice(-TAIL_CHARS);
+  const from = cut.indexOf('\n') + 1;   // start on a clean line
+  return digest + '\n\n## EARLIER LEDGER (history — the block above supersedes anything here that disagrees; '
+    + Math.round((rest.length - TAIL_CHARS) / 1000) + 'k of older notes not shown)\n\n' + cut.slice(from);
+}
+
 function buildScene(slot, window) {
   const chat = readJson(path.join(dir, 'chat.json'), { log: [] });
   const sheet = readJson(path.join(dir, 'sheet.json'), {});
@@ -108,7 +142,7 @@ function buildScene(slot, window) {
   const cast = readJson(path.join(dir, 'characters.json'), { people: [] }).people;
   const castList = cast.map(p => p.id + ' = ' + p.name + (p.met ? '' : ' (not yet met)')).join('; ');
   const stable = [ENGINE_RULES, briefSections(), read(path.join(dir, 'voice-bible.md')), read(path.join(dir, 'roll-doctrine.md')), '# THE RULEBOOK (digest)\n' + rulesDigest()].join('\n\n---\n\n');
-  const semi = ['# CONTINUITY — this campaign\n' + read(path.join(dir, contFile(slot))), '# CAST ids\n' + castList].join('\n\n---\n\n');
+  const semi = ['# CONTINUITY — this campaign\n' + continuityForPrompt(slot), '# CAST ids\n' + castList].join('\n\n---\n\n');
   const volatile = [sheetSummary(sheet), '# CHARACTER MEMORY — people in this scene\n' + (memoriesFor(slot, recentText) || '(none matched)'), '# SCENE\n' + (chat.scene || '')].join('\n\n---\n\n');
   const messages = recent.map(e => ({ role: e.who === 'you' ? 'user' : 'assistant', content: String(e.text) }));
   // the API needs alternating roles starting with user; merge neighbours
@@ -136,8 +170,8 @@ const TOOLS = [
     } } },
   { name: 'write_tales', description: 'Add new tales to the shelf from recent play (chapter close / "generate tales").', strict: true,
     input_schema: { type: 'object', additionalProperties: false, required: ['tales'], properties: { tales: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['id', 'cat', 'title', 'sub', 'chapter', 'text'], properties: { id: { type: 'string', description: 'unique, lowercase, prefixed for this campaign' }, cat: { type: 'string' }, title: { type: 'string' }, sub: { type: 'string' }, chapter: { type: 'string' }, text: { type: 'string', description: 'the tale with cue tags, 400–700 words' } } } } } } },
-  { name: 'update_continuity', description: 'Append a dated note to this campaign\'s continuity file when an established fact changes.', strict: true,
-    input_schema: { type: 'object', additionalProperties: false, required: ['note'], properties: { note: { type: 'string' } } } },
+  { name: 'update_continuity', description: 'Record something in the campaign\'s continuity ledger. mode "append" adds a dated line to the timeline. mode "rewrite_story_so_far" REPLACES the STORY SO FAR digest at the top of the file - use that when a standing fact changes or is corrected, so the correction supersedes the old text instead of contradicting it.', strict: true,
+    input_schema: { type: 'object', additionalProperties: false, required: ['note', 'mode'], properties: { note: { type: 'string' }, mode: { type: 'string', enum: ['append', 'rewrite_story_so_far'] } } } },
   { name: 'update_cast', description: 'Add a person to the cast (their card appears on the People tab) or amend an existing dossier. Only for people who genuinely entered the story at this table; amendments are conservative and never rewrite history.', strict: true,
     input_schema: { type: 'object', additionalProperties: false, required: ['people'], properties: { people: { type: 'array', items: { type: 'object', additionalProperties: false,
       required: ['id', 'name', 'house', 'role', 'desc', 'quote', 'bond', 'met'], properties: {
@@ -188,8 +222,33 @@ function writeTales(slot, input) {
   try { const p = spawn(path.join(dir, 'voice/venv/Scripts/python.exe'), ['bake.py'], { cwd: path.join(dir, 'voice'), detached: true, stdio: 'ignore' }); p.on('exit', () => { try { fs.unlinkSync(path.join(dir, 'voice/BAKING')); } catch (e) {} }); p.unref(); } catch (e) { try { fs.unlinkSync(path.join(dir, 'voice/BAKING')); } catch (e2) {} }
   return 'added: ' + added.join(', ') + ' (baking in the background)';
 }
-function updateContinuity(slot, note) {
-  if (DRY) { log('DRY — continuity note: ' + note.slice(0, 120)); return 'dry'; }
+const DIGEST_OPEN = '<!-- STORY SO FAR - rewritten by the engine. Everything in this block is CURRENT and supersedes any older note below it. -->';
+const DIGEST_CLOSE = '<!-- /STORY SO FAR -->';
+const DIGEST_EVERY = parseInt(process.env.GM_DIGEST_EVERY || '20', 10);   // filed turns between digests
+
+function writeDigest(slot, body) {
+  const p = path.join(dir, contFile(slot));
+  let t = read(p);
+  const block = DIGEST_OPEN + '\n\n## STORY SO FAR (current as of ' + new Date().toISOString().slice(0, 10) + ')\n\n' + String(body).trim() + '\n\n' + DIGEST_CLOSE;
+  const a = t.indexOf(DIGEST_OPEN), b = t.indexOf(DIGEST_CLOSE);
+  if (a > -1 && b > a) t = t.slice(0, a) + block + t.slice(b + DIGEST_CLOSE.length);
+  else {
+    // first time: sit the digest directly under the title so it is read before the old notes
+    const nl = t.indexOf('\n');
+    t = (nl > -1 ? t.slice(0, nl + 1) : t + '\n') + '\n' + block + '\n' + (nl > -1 ? t.slice(nl + 1) : '');
+  }
+  fs.writeFileSync(p, t);
+  return 'digest written (' + String(body).length + ' chars)';
+}
+function readDigest(slot) {
+  const t = read(path.join(dir, contFile(slot)));
+  const a = t.indexOf(DIGEST_OPEN), b = t.indexOf(DIGEST_CLOSE);
+  return (a > -1 && b > a) ? t.slice(a + DIGEST_OPEN.length, b).trim() : '';
+}
+
+function updateContinuity(slot, note, mode) {
+  if (DRY) { log('DRY — continuity (' + (mode || 'append') + '): ' + note.slice(0, 200)); return 'dry'; }
+  if (mode === 'rewrite_story_so_far') return writeDigest(slot, note);
   fs.appendFileSync(path.join(dir, contFile(slot)), '\n- [engine ' + new Date().toISOString().slice(0, 10) + '] ' + note + '\n');
   return 'noted';
 }
@@ -261,9 +320,9 @@ async function answerInner(slot, playerText) {
     for (const u of uses) {
       let out = 'ok';
       try {
-        if (u.name === 'file_turn' && filed) { out = 'a turn is already filed for this message - do not file another; you are done'; } else if (u.name === 'file_turn') { out = fileTurn(slot, u.input); filed = filed || out === 'filed' || out === 'dry'; if (u.input.chapter && out === 'filed') { const opened = u.input.chapter; setTimeout(() => chapterClose(slot, prevChapterLabel(opened)).catch(() => {}), 1500); log('chapter opened: ' + opened + ' - closing the last one in the background'); } log('turn:', String(u.input.text).replace(/\s+/g, ' ').slice(0, DRY ? 4000 : 160)); if (DRY) log('bookkeeping:', JSON.stringify({ ask: u.input.ask, set: u.input.set, mem: u.input.mem, journal: u.input.journal, done: u.input.done, missed: u.input.missed, meet: u.input.meet, scene: u.input.scene, track: u.input.track, amb: u.input.amb, chapter: u.input.chapter, meta: u.input.meta })); } if (DRY) { const tt = String(u.input.text); log('shape: ' + tt.split(/\n\s*\n/).length + ' paragraphs, ' + tt.length + ' chars'); fs.writeFileSync(path.join(dir, 'engine-dry-turn.txt'), tt); }
+        if (u.name === 'file_turn' && filed) { out = 'a turn is already filed for this message - do not file another; you are done'; } else if (u.name === 'file_turn') { if (DRY) { const tt = String(u.input.text); log('shape: ' + tt.split(/\n\s*\n/).length + ' paragraphs, ' + tt.length + ' chars'); fs.writeFileSync(path.join(dir, 'engine-dry-turn.txt'), tt); } out = fileTurn(slot, u.input); filed = filed || out === 'filed' || out === 'dry'; if (u.input.chapter && out === 'filed') { const opened = u.input.chapter; setTimeout(() => chapterClose(slot, prevChapterLabel(opened)).catch(() => {}), 1500); log('chapter opened: ' + opened + ' - closing the last one in the background'); } log('turn:', String(u.input.text).replace(/\s+/g, ' ').slice(0, DRY ? 4000 : 160)); if (DRY) log('bookkeeping:', JSON.stringify({ ask: u.input.ask, set: u.input.set, mem: u.input.mem, journal: u.input.journal, done: u.input.done, missed: u.input.missed, meet: u.input.meet, scene: u.input.scene, track: u.input.track, amb: u.input.amb, chapter: u.input.chapter, meta: u.input.meta })); }
         else if (u.name === 'write_tales') out = writeTales(slot, u.input);
-        else if (u.name === 'update_continuity') out = updateContinuity(slot, u.input.note);
+        else if (u.name === 'update_continuity') out = updateContinuity(slot, u.input.note, u.input.mode);
         else if (u.name === 'update_cast') out = updateCast(slot, u.input);
       } catch (e) { out = 'error: ' + e.message; }
       results.push({ type: 'tool_result', tool_use_id: u.id, content: out });
@@ -299,8 +358,7 @@ async function chapterClose(slot, closedLabel) {
     const w = closedChapterWindow(chat, closedLabel);
     const scene = buildScene(slot, w.entries);
     const ask = '(chapter close: "' + w.label + '" has just closed. This is bookkeeping, not play - use tools only and file nothing to the table. '
-      + '1) write_tales: the tales that chapter earned, by the "Generating tales" rules in the brief - two to four, each true to what the player actually did and said, each in one character\'s voice or the narrator\'s, chapter field = "' + w.label + '". Do not retell scenes the player watched; tell what they could not see. '
-      + '2) update_continuity: one compact block headed "' + w.label + ' - settled" with: the in-world date and hour at the close; standing appointments still open; facts that must hold from here on; and any earlier note this chapter made stale. Never invent - if the turns above do not say it, leave it out.)';
+      + 'update_continuity: one compact block headed "' + w.label + ' - settled" with: the in-world date and hour at the close; standing appointments still open; facts that must hold from here on; and any earlier note this chapter made stale. Never invent - if the turns above do not say it, leave it out.)';
     const history = scene.messages.slice();
     if (history.length) { const last = history[history.length - 1]; last.content = [{ type: 'text', text: String(last.content), cache_control: { type: 'ephemeral', ttl: '1h' } }]; }
     const messages = history.concat([{ role: 'user', content: '[CAMPAIGN STATE]\n\n' + scene.volatile + '\n\n' + ask }]);
@@ -308,7 +366,7 @@ async function chapterClose(slot, closedLabel) {
     for (let hop = 0; hop < 3; hop++) {
       const r = await client.messages.create({
         model: MODEL, max_tokens: 8000, ...(THINKING ? { thinking: THINKING } : {}), ...(THINKING ? { output_config: { effort: EFFORT } } : {}),
-        tools: TOOLSET.filter(t => t.name !== 'file_turn'), tool_choice: hop === 0 ? { type: 'any' } : { type: 'auto' },
+        tools: TOOLSET.filter(t => t.name !== 'file_turn' && t.name !== 'write_tales'), tool_choice: hop === 0 ? { type: 'any' } : { type: 'auto' },
         system: [{ type: 'text', text: scene.stable, cache_control: { type: 'ephemeral', ttl: '1h' } }, { type: 'text', text: scene.semi, cache_control: { type: 'ephemeral', ttl: '1h' } }],
         messages,
       });
@@ -321,7 +379,7 @@ async function chapterClose(slot, closedLabel) {
         try {
           if (u.name === 'write_tales') { o = writeTales(slot, u.input); did.push('tales: ' + u.input.tales.map(t => t.id).join(', ')); if (DRY) log('DRY tales:', JSON.stringify(u.input.tales.map(t => ({ id: t.id, cat: t.cat, title: t.title, chapter: t.chapter, words: String(t.text).split(/\s+/).length })))); }
           else if (u.name === 'update_cast') { o = updateCast(slot, u.input); did.push('cast'); if (DRY) log('DRY cast (job): ' + o); }
-          else if (u.name === 'update_continuity') { o = updateContinuity(slot, u.input.note); did.push('continuity'); if (DRY) log('DRY continuity:', u.input.note.slice(0, 1200)); }
+          else if (u.name === 'update_continuity') { o = updateContinuity(slot, u.input.note, u.input.mode); did.push('continuity'); if (DRY) log('DRY continuity:', u.input.note.slice(0, 1200)); }
           else o = 'not in this job';
         } catch (err) { o = 'error: ' + err.message; }
         results.push({ type: 'tool_result', tool_use_id: u.id, content: o });
@@ -335,6 +393,57 @@ async function chapterClose(slot, closedLabel) {
     log('chapter close "' + w.label + '": ' + (did.join('; ') || 'nothing written') + ' - in ' + usage.in + ' (cache read ' + usage.cacheRead + ', write ' + usage.cacheWrite + ') out ' + usage.out + ' ≈ $' + cost.toFixed(3));
     const st = readJson(STATE, {}); st.spent = (st.spent || 0) + cost; st.jobs = (st.jobs || 0) + 1; if (!DRY) fs.writeFileSync(STATE, JSON.stringify(st, null, 2));
   } catch (err) { STATUS.error = 'chapter close: ' + String(err.message || err).slice(0, 160); log('chapter close ERROR', err.status || '', err.message); }
+  finally { STATUS.busy = false; STATUS.job = null; STATUS.lastMs = Date.now() - t0; }
+}
+
+/* ---------------- the memory job: keep STORY SO FAR current ---------------- */
+// The model only sees the last 30 turns. Everything older is remembered through this digest,
+// so it is rewritten (never appended to) every DIGEST_EVERY turns and whenever asked.
+async function refreshDigest(slot, why) {
+  STATUS.busy = true; STATUS.job = 'remembering'; const t0 = Date.now();
+  try {
+    const chat = readJson(path.join(dir, 'chat.json'), { log: [] });
+    const window = chat.log.filter(x => !x.meta).slice(-70);
+    const scene = buildScene(slot, window);
+    const prior = readDigest(slot);
+    const ask = '(memory pass - bookkeeping, not play. Use update_continuity with mode "rewrite_story_so_far" and nothing else; file no turn.\n\n'
+      + 'Rewrite the STORY SO FAR digest so that a Game Master who has read ONLY this digest could run the next turn without contradicting anything. It replaces the previous digest, so carry forward everything still true and drop what has been superseded.\n\n'
+      + 'Structure it plainly, under these headings, and keep it under 700 words:\n'
+      + 'WHERE WE ARE - the in-world date, hour, place, and who is present.\n'
+      + 'WHO MATTERS NOW - a line per person in play: who they are to the player, and where they stand.\n'
+      + 'SETTLED FACTS - the things that must not bend: the timetable as played, promises made, what the player carries, what has been ruled at the table. If two older notes disagree, keep only the one the player last confirmed and say so plainly.\n'
+      + 'OPEN THREADS - what is unresolved, and what is owed to whom.\n'
+      + 'STANDING ORDERS - the player\'s table preferences, verbatim in one line each.\n\n'
+      + 'Never invent. If the turns and the previous digest do not say it, leave it out.\n\n'
+      + 'PREVIOUS DIGEST (supersede it):\n' + (prior || '(none yet - build the first one from the turns above and the ledger)') + ')';
+    const history = scene.messages.slice();
+    if (history.length) { const last = history[history.length - 1]; last.content = [{ type: 'text', text: String(last.content), cache_control: { type: 'ephemeral', ttl: '1h' } }]; }
+    const messages = history.concat([{ role: 'user', content: '[CAMPAIGN STATE]\n\n' + scene.volatile + '\n\n' + ask }]);
+    let usage = { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 }, wrote = false;
+    for (let hop = 0; hop < 2; hop++) {
+      const r = await client.messages.create({
+        model: MODEL, max_tokens: 4000, ...(THINKING ? { thinking: THINKING, output_config: { effort: EFFORT } } : {}),
+        tools: TOOLSET.filter(t => t.name === 'update_continuity'), tool_choice: hop === 0 ? { type: 'any' } : { type: 'auto' },
+        system: [{ type: 'text', text: scene.stable, cache_control: { type: 'ephemeral', ttl: '1h' } }, { type: 'text', text: scene.semi, cache_control: { type: 'ephemeral', ttl: '1h' } }],
+        messages,
+      });
+      usage.in += r.usage.input_tokens || 0; usage.out += r.usage.output_tokens || 0; usage.cacheRead += r.usage.cache_read_input_tokens || 0; usage.cacheWrite += r.usage.cache_creation_input_tokens || 0;
+      const uses = r.content.filter(b => b.type === 'tool_use'); if (!uses.length) break;
+      messages.push({ role: 'assistant', content: r.content });
+      const results = [];
+      for (const u of uses) {
+        let o = 'ok';
+        try { if (u.name === 'update_continuity') { o = updateContinuity(slot, u.input.note, 'rewrite_story_so_far'); wrote = true; } } catch (err) { o = 'error: ' + err.message; }
+        results.push({ type: 'tool_result', tool_use_id: u.id, content: o });
+      }
+      messages.push({ role: 'user', content: results });
+      if (r.stop_reason === 'end_turn') break;
+    }
+    const PRICE = /opus/.test(MODEL) ? { in: 5, read: 0.5, write: 10, out: 25 } : /haiku/.test(MODEL) ? { in: 1, read: 0.1, write: 2, out: 5 } : { in: 2, read: 0.2, write: 4, out: 10 };
+    const cost = (usage.in * PRICE.in + usage.cacheRead * PRICE.read + usage.cacheWrite * PRICE.write + usage.out * PRICE.out) / 1e6;
+    log('memory pass (' + why + '): ' + (wrote ? 'STORY SO FAR rewritten' : 'nothing written') + ' ≈ $' + cost.toFixed(3));
+    const st = readJson(STATE, {}); st.spent = (st.spent || 0) + cost; st.lastDigestTurn = (st.turns || 0); if (!DRY) fs.writeFileSync(STATE, JSON.stringify(st, null, 2));
+  } catch (err) { log('memory pass ERROR', err.status || '', err.message); }
   finally { STATUS.busy = false; STATUS.job = null; STATUS.lastMs = Date.now() - t0; }
 }
 
@@ -402,6 +511,7 @@ async function main() {
     STATUS.controlUp = true;
   }
   if (!slot) { log('no live campaign (chat.json has no profile)'); process.exit(1); }
+  if (process.argv.includes('--digest')) { await refreshDigest(slot, 'by hand'); process.exit(0); }
   const jobAt = process.argv.indexOf('--job');
   if (jobAt > -1) { await chapterClose(slot, process.argv[jobAt + 1] || ''); process.exit(0); }
   if (process.argv.includes('--measure')) {
@@ -414,7 +524,7 @@ async function main() {
     total += await count('voice bible', read(path.join(dir, 'voice-bible.md')));
     total += await count('roll doctrine', read(path.join(dir, 'roll-doctrine.md')));
     total += await count('rulebook digest', rulesDigest());
-    total += await count('continuity + cast (1h block)', read(path.join(dir, contFile(slot))));
+    total += await count('continuity as sent (1h block)', continuityForPrompt(slot));
     const chat = readJson(path.join(dir, 'chat.json'), { log: [] });
     const recentText = chat.log.filter(e => !e.meta).slice(-8).map(e => e.text).join(' ');
     memoriesFor.matched = [];
@@ -447,7 +557,11 @@ async function main() {
         if (RETRY.seq === m.seq && Date.now() < RETRY.at) break;   // still waiting out a backoff
         log('player:', String(m.text).slice(0, 140) + (RETRY.seq === m.seq ? ' (retry ' + RETRY.n + ')' : ''));
         markHandled(m.seq);
-        try { await answer(slot, String(m.text)); RETRY.seq = null; RETRY.n = 0; }
+        try {
+          await answer(slot, String(m.text)); RETRY.seq = null; RETRY.n = 0;
+          const st2 = readJson(STATE, {});
+          if ((st2.turns || 0) - (st2.lastDigestTurn || 0) >= DIGEST_EVERY) await refreshDigest(slot, 'every ' + DIGEST_EVERY + ' turns');
+        }
         catch (err) {
           const n = RETRY.seq === m.seq ? RETRY.n + 1 : 1;
           if (retryable(err) && n <= 4) { const wait = Math.min(60000, 4000 * Math.pow(2, n - 1)); RETRY.seq = m.seq; RETRY.n = n; RETRY.at = Date.now() + wait; unmarkHandled(m.seq); log('ERROR', err.status || '', err.message, '- retrying in ' + Math.round(wait / 1000) + 's'); break; }

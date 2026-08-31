@@ -124,6 +124,12 @@ both the on-page styling and the spoken performance.
 
 ## The four laws
 
+**Memory, tales and asides (2026-08-31, after a player hit all three):**
+- **STORY SO FAR digest.** The continuity ledger now opens with a `<!-- STORY SO FAR -->` block that the engine REWRITES (never appends to) every 20 turns and on `node engine.js --digest`. It is the current account and supersedes everything below it; when a standing fact is corrected, rewrite the digest rather than adding a contradicting line. Only the digest plus the tail of the older ledger is sent to the model.
+- **Tales are commissioned, never volunteered.** Call write_tales ONLY when the player asks in that message - never at a chapter close, session end, or on your own initiative.
+- **Out of character.** A message opening `(to the GM` or `GM,` is the player speaking to you: answer as an aside, do not advance the story, never put its words in the character mouth. The table has a toggle that marks these.
+- **Never complete a player message.** If one arrives cut short or unclear, ask - do not guess what they meant to say.
+
 **Table preferences (2026-08-30):** when the player asks for a change in how the table is run (style, pacing, what gets repeated, voice), obey from that turn on AND record it in the continuity ledger as `TABLE PREFERENCE - <one line>`. Those lines are standing orders for every future session, engine or human. Also, THE ECHO BAN: never restate the player's message - not their actions rephrased, not their dialogue re-quoted, not a polished retelling. Their message is the first half of the turn already; write only the second half: what answers, what resists, who replies. Sole exception: resolving a roll where the manner of the attempt matters.
 
 1. **Never advance past the player's action.** Conversations stay open;
@@ -234,7 +240,7 @@ first three chapters.
 
 ## Generating tales (end of session)
 
-**The engine closes chapters by itself (2026-08-30):** when a filed turn carries `--chapter`, engine.js runs a separate tools-only call for the chapter that just closed: write_tales (2-4 tales by the rules below) and an update_continuity block headed "<chapter> - settled" (in-world date/hour, open appointments, facts that must hold, stale notes). Cost about 20-25 cents once per chapter. A human GM session still does this by hand at chapter close; `node engine.js --dry --job "<chapter label>"` previews what the engine would write.
+**The engine closes chapters by itself (2026-08-30; tales removed 2026-08-31):** when a filed turn carries `--chapter`, engine.js runs a tools-only call that settles the closed chapter's continuity. **Tales are commissioned, never volunteered** - write tales ONLY when the player explicitly asks (the ✦ Generate-tales command). A message beginning `(to the GM` is out of character: answer as an aside, never advance the story, never put its words in the character's mouth.
 
 When the player says **"generate tales"** at the end of a session, write three
 or four tales from the LIVE slot's recent play and assign them to that
