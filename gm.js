@@ -14,10 +14,11 @@ const SHEET = path.join(dir, 'sheet.json');
 
 const argv = process.argv.slice(2);
 const text = argv[0];
-if (!text) { console.error('usage: node gm.js "text" [--you "..."] [--seq N] ...'); process.exit(1); }
-// A flag arriving as the turn text means the call was mis-quoted (the shell split the arguments):
-// refuse it rather than writing nonsense into the record.
-if (/^--/.test(String(text).trim())) {
+if (!text) { console.error('usage: node gm.js "text" [--you "..."] [--seq N] ...  (or flags only, e.g. --mem "id|event", to record without posting a turn)'); process.exit(1); }
+// A flag where the narration should be is either a deliberate bookkeeping-only call
+// (`gm.js --mem "..."`, nothing posted to the table) or a mis-quoted turn. Tell them apart.
+const SILENT = /^--/.test(String(text).trim()) && argv.length > 1;
+if (/^--/.test(String(text).trim()) && !SILENT) {
   console.error('refused: the turn text is "' + text + '", which is a flag, not narration - the command was mis-quoted. Put the narration first, in quotes: node gm.js "[warm] ..." --mem "nell|..."');
   process.exit(1);
 }
@@ -69,8 +70,8 @@ flag('plate');
 const ask = flag('ask');
 if (ask) { const [label, stat, mod, dc, edge] = ask.split('|'); turn.ask = { label, stat, mod: Number(mod) || 0, dc: Number(dc) || 10 }; if (edge && /^(edge|burden)$/i.test(edge.trim())) turn.ask.edge = edge.trim().toLowerCase(); }
 const chap = flag('chapter');
-if (chap) { (doc.chapters = doc.chapters || []).push({ label: chap, start: doc.log.length }); }
-doc.log.push(turn);
+if (chap && !SILENT) { (doc.chapters = doc.chapters || []).push({ label: chap, start: doc.log.length }); }
+if (!SILENT) doc.log.push(turn); else console.log('  bookkeeping only - nothing posted to the table');
 
 const scene = flag('scene'); if (scene) doc.scene = scene;
 const track = flag('track'); if (track) doc.track = track;

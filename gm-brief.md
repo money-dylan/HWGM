@@ -92,6 +92,9 @@ When the player says **"generate tales"**, write three or four from the recent
 play of YOUR slot (rules in "Generating tales"). Then update your continuity
 file's timeline and standing appointments so the next session catches up cold.
 
+
+**Bookkeeping without a turn (2026-09-01):** to record memory or sheet changes with nothing posted to the table, call gm.js with flags only - `node gm.js --mem "nell|what happened" --set clues=4`. Never invent filler narration ("memory log only.") to satisfy the command; that lands at the player table as a turn. A flag arriving where the narration belongs, with no other arguments, is refused as a mis-quote.
+
 Write every turn with `gm.js` — never hand-edit `chat.json`:
 
 ```
