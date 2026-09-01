@@ -51,6 +51,10 @@ You are the Game Master of The Hollow Ledger, a solo Hogwarts tabletop game set 
 
 Turn text rules: second person, the fireside narrator voice from the voice bible; mood cues [plain] [soft] [warm] [tense] [grand] [excited] [afraid] and speaker cues like [nell] [posy] [idris] [dumbledore] [lady] [rooke] [odette] [mum] [dad] [captain]... before quoted dialogue; ~150–300 words for an ordinary turn; end on the player's move. THE ECHO BAN (a standing player complaint - treat as law): never restate the player's message. Not their actions rephrased ('You lean down and offer Captain your shoulder...'), not their dialogue re-quoted ('"I know what she means, mate," you say...'), not a polished retelling of what they typed. Their message IS the first half of the turn - it is already on the table, in their words. Your turn is ONLY the second half: what answers, what resists, what changes, who replies. BAD: player writes [I take Rooke's hand. "Time to see if I named you right."] and the turn opens [You take Rooke's hand. "Time to see if I named you right," you say...]. GOOD: the turn opens with Rooke's grip, the boat dipping, Captain's claws, the reply. The single exception: resolving a roll, where the manner of the attempt matters. If a turn would begin with 'You', look hard at it. Capitalise mechanic terms only where a rule is genuinely being named.
 
+CHECK, DO NOT GUESS: you see only the most recent turns and the digest. For anything older - who knows what, who was where, what was said to whom - call search_record before you assert it, and always when the player disputes something. "NOT FOUND" means it never happened; say so plainly and correct the record rather than defending the mistake.
+
+A REWIND MUST ACTUALLY REWIND: when the player rewinds, or says a thing did not happen, call retract_turns. Saying "rolled back" removes nothing - the turn stays in the record and you will read it back as fact a few turns later, which is exactly how a corrected mistake creeps back in.
+
 TALES ARE COMMISSIONED, never volunteered: call write_tales ONLY when the player explicitly asks for tales in that message. Never at a chapter close, never at session end, never on your own initiative, never "while we're here" - not one. A scene being lovely is not a request. If you think tales are owed, say so in a sentence and wait to be asked.
 
 OUT OF CHARACTER: a player message that opens with "(to the GM" or "GM," is the player speaking to YOU, not their character acting. Answer it as an aside (meta=true): do not advance the story, do not narrate a scene, do not put its words in the character's mouth or treat them as spoken aloud, and do not echo it back. Honour what it asks from that turn on.
@@ -137,7 +141,7 @@ function continuityForPrompt(slot) {
 function buildScene(slot, window) {
   const chat = readJson(path.join(dir, 'chat.json'), { log: [] });
   const sheet = readJson(path.join(dir, 'sheet.json'), {});
-  const recent = window ? window.filter(e => !e.meta) : chat.log.filter(e => !e.meta).slice(-30);
+  const recent = window ? window.filter(e => !e.meta && !e.retracted) : chat.log.filter(e => !e.meta && !e.retracted).slice(-30);
   const recentText = recent.slice(-4).map(e => e.text).join(' ');
   const cast = readJson(path.join(dir, 'characters.json'), { people: [] }).people;
   const castList = cast.map(p => p.id + ' = ' + p.name + (p.met ? '' : ' (not yet met)')).join('; ');
@@ -183,6 +187,10 @@ const TOOLS = [
         quote: { type: ['string', 'null'], description: 'ONLY words actually spoken at this table' },
         bond: { type: ['string', 'null'], description: 'sheet key for their bond hearts, e.g. "bond_Odette"; usually null' },
         met: { type: ['boolean', 'null'] } } } } } } },
+  { name: 'search_record', description: 'Search the full played transcript of this campaign - every turn, not only the recent ones you can see. Use it BEFORE asserting anything about the past that is not in the digest, and always when the player disputes a fact.', strict: true,
+    input_schema: { type: 'object', additionalProperties: false, required: ['query'], properties: { query: { type: 'string', description: 'a word or phrase, e.g. "brass disc" or "Priya"' } } } },
+  { name: 'retract_turns', description: 'Strike the last N story turns from the record when the player rewinds or says something did not happen. They stop being part of the story for everyone, including you. Saying "rolled back" removes nothing - this does.', strict: true,
+    input_schema: { type: 'object', additionalProperties: false, required: ['count', 'reason'], properties: { count: { type: 'integer', description: 'how many recent story turns to strike' }, reason: { type: 'string' } } } },
 ];
 
 // haiku cannot compile our strict schemas into a grammar; it gets the same tools unstrict
@@ -279,6 +287,29 @@ function updateCast(slot, input) {
   return done.join('; ');
 }
 
+function searchRecord(slot, query) {
+  const chat = readJson(path.join(dir, 'chat.json'), { log: [] });
+  const q = String(query || '').trim(); if (!q) return 'no query';
+  let re; try { re = new RegExp(q.replace(/[.*+?^\${}()|[\]\\]/g, '\\$&'), 'i'); } catch (err) { return 'bad query'; }
+  const hits = [];
+  chat.log.forEach((en, i) => {
+    if (!en || en.retracted || !re.test(String(en.text))) return;
+    const t = String(en.text).replace(/\s+/g, ' ');
+    const at = t.search(re);
+    hits.push('[' + i + '] ' + (en.who === 'you' ? 'PLAYER' : 'GM') + (en.meta ? ' (aside)' : '') + ': …' + t.slice(Math.max(0, at - 110), at + 220) + '…');
+  });
+  if (!hits.length) return 'NOT FOUND in the played record: "' + q + '". It has never happened at this table - do not assert it.';
+  const head = hits.length + ' entries mention "' + q + '" (earliest first; entry numbers are positions in the record):\n';
+  return head + (hits.length > 12 ? hits.slice(0, 6).concat(['   … ' + (hits.length - 12) + ' more …'], hits.slice(-6)) : hits).join('\n');
+}
+function retractTurns(slot, input) {
+  const count = Math.max(1, Math.min(20, parseInt(input.count, 10) || 1));
+  if (DRY) { log('DRY — would retract ' + count + ' turns: ' + input.reason); return 'dry'; }
+  const r = spawnSync(process.execPath, ['gm.js', '--retract', String(count), '--as', slot], { cwd: dir, encoding: 'utf8' });
+  log('retract:', (r.stdout || '').trim().replace(/\n/g, ' | '));
+  return r.status === 0 ? 'struck ' + count + ' turn(s) from the record' : 'REFUSED: ' + (r.stderr || r.stdout);
+}
+
 /* ---------------- one turn ---------------- */
 async function answer(slot, playerText) {
   STATUS.busy = true; STATUS.slot = slot; STATUS.lastPlayer = playerText; STATUS.error = null; const t0 = Date.now();
@@ -324,6 +355,8 @@ async function answerInner(slot, playerText) {
         else if (u.name === 'write_tales') out = writeTales(slot, u.input);
         else if (u.name === 'update_continuity') out = updateContinuity(slot, u.input.note, u.input.mode);
         else if (u.name === 'update_cast') out = updateCast(slot, u.input);
+        else if (u.name === 'search_record') out = searchRecord(slot, u.input.query);
+        else if (u.name === 'retract_turns') out = retractTurns(slot, u.input);
       } catch (e) { out = 'error: ' + e.message; }
       results.push({ type: 'tool_result', tool_use_id: u.id, content: out });
     }
@@ -403,7 +436,7 @@ async function refreshDigest(slot, why) {
   STATUS.busy = true; STATUS.job = 'remembering'; const t0 = Date.now();
   try {
     const chat = readJson(path.join(dir, 'chat.json'), { log: [] });
-    const window = chat.log.filter(x => !x.meta).slice(-70);
+    const window = chat.log.filter(x => !x.meta && !x.retracted).slice(-70);
     const scene = buildScene(slot, window);
     const prior = readDigest(slot);
     const ask = '(memory pass - bookkeeping, not play. Use update_continuity with mode "rewrite_story_so_far" and nothing else; file no turn.\n\n'
@@ -414,16 +447,16 @@ async function refreshDigest(slot, why) {
       + 'SETTLED FACTS - the things that must not bend: the timetable as played, promises made, what the player carries, what has been ruled at the table. If two older notes disagree, keep only the one the player last confirmed and say so plainly.\n'
       + 'OPEN THREADS - what is unresolved, and what is owed to whom.\n'
       + 'STANDING ORDERS - the player\'s table preferences, verbatim in one line each.\n\n'
-      + 'Never invent. If the turns and the previous digest do not say it, leave it out.\n\n'
+      + 'Check before you carry a fact forward: the previous digest may contain errors that were corrected in play. Use search_record for anything you are not certain of - who knows what, who was told what, who was present - and drop anything the record does not support. Never invent. If the record does not say it, leave it out.\n\n'
       + 'PREVIOUS DIGEST (supersede it):\n' + (prior || '(none yet - build the first one from the turns above and the ledger)') + ')';
     const history = scene.messages.slice();
     if (history.length) { const last = history[history.length - 1]; last.content = [{ type: 'text', text: String(last.content), cache_control: { type: 'ephemeral', ttl: '1h' } }]; }
     const messages = history.concat([{ role: 'user', content: '[CAMPAIGN STATE]\n\n' + scene.volatile + '\n\n' + ask }]);
     let usage = { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 }, wrote = false;
-    for (let hop = 0; hop < 2; hop++) {
+    for (let hop = 0; hop < 5; hop++) {   // searching costs hops; leave room to verify then write
       const r = await client.messages.create({
         model: MODEL, max_tokens: 4000, ...(THINKING ? { thinking: THINKING, output_config: { effort: EFFORT } } : {}),
-        tools: TOOLSET.filter(t => t.name === 'update_continuity'), tool_choice: hop === 0 ? { type: 'any' } : { type: 'auto' },
+        tools: TOOLSET.filter(t => t.name === 'update_continuity' || t.name === 'search_record'), tool_choice: hop === 0 ? { type: 'any' } : { type: 'auto' },
         system: [{ type: 'text', text: scene.stable, cache_control: { type: 'ephemeral', ttl: '1h' } }, { type: 'text', text: scene.semi, cache_control: { type: 'ephemeral', ttl: '1h' } }],
         messages,
       });
@@ -526,7 +559,7 @@ async function main() {
     total += await count('rulebook digest', rulesDigest());
     total += await count('continuity as sent (1h block)', continuityForPrompt(slot));
     const chat = readJson(path.join(dir, 'chat.json'), { log: [] });
-    const recentText = chat.log.filter(e => !e.meta).slice(-8).map(e => e.text).join(' ');
+    const recentText = chat.log.filter(e => !e.meta && !e.retracted).slice(-8).map(e => e.text).join(' ');
     memoriesFor.matched = [];
     total += await count('character memories (matched)', memoriesFor(slot, recentText));
     console.log('  matched files:', (memoriesFor.matched || []).join(', ') || 'none');

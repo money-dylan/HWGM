@@ -288,7 +288,7 @@ a:hover{color:var(--seal)}
       <div class="chiprow pacerow">
         <button type="button" class="chip pace" data-say="(pacing: I'm not done with this scene — hold here, there's more I want to do or say)">⏸ more here</button>
         <button type="button" class="chip pace" data-say="(pacing: I'm done with this beat — move it along)">▶ move it along</button>
-        <button type="button" class="chip pace" data-say="(pacing: rewind — that went further than I wanted; take us back to just before that)">↩ rewind that</button>
+        <button type="button" class="chip pace" data-say="(pacing: rewind — that went further than I wanted. Strike those turns from the record with retract_turns, do not merely say they are rolled back, then take us back to just before that)">↩ rewind that</button>
       </div>
       <div class="convo-in chat-in" style="position:relative">
         <button type="button" class="chip" id="tt-mode" title="who is speaking: your character in the story, or you to the Game Master" aria-label="Speaking mode">\u2694 in game</button>
@@ -1738,7 +1738,7 @@ function tok(n){ return getComputedStyle(document.documentElement).getPropertyVa
     if(sb){ if(feed.scene){ sb.textContent=feed.scene; sb.style.display='' } else sb.style.display='none' }
     var nearBottom=(logEl.scrollHeight-logEl.scrollTop-logEl.clientHeight)<160;
     logEl.innerHTML='';
-    var items=[]; feed.log.forEach(function(m,i){ if(!/^\(pacing:/.test(m.text||''))items.push({m:m,idx:i}) });
+    var items=[]; feed.log.forEach(function(m,i){ if(!m.retracted && !/^\(pacing:/.test(m.text||''))items.push({m:m,idx:i}) });
     pending.forEach(function(m){ items.push({m:{who:'you',text:m.text,waiting:true},idx:1e9}) });
     var all=items.map(function(x){ return x.m });
     var bounds=(feed.chapters||[]).slice().sort(function(a,b){ return a.start-b.start });

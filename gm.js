@@ -58,6 +58,20 @@ if (argv.indexOf('--noinbox') < 0) {
   } catch (e) {}
 }
 
+// --retract N: strike the last N story entries from the record. They stay in the file for the
+// player's own history but are never sent to the Game Master again and never shown at the table,
+// so a rewind actually rewinds instead of leaving the mistake in play.
+const retractN = parseInt(flag('retract') || '0', 10);
+if (retractN > 0) {
+  let done = 0;
+  for (let i = doc.log.length - 1; i >= 0 && done < retractN; i--) {
+    const e = doc.log[i];
+    if (e.retracted || e.meta) continue;
+    e.retracted = true; done++;
+  }
+  console.log('  retracted ' + done + ' entr' + (done === 1 ? 'y' : 'ies') + ' - struck from the record');
+}
+
 let you = flag('you');
 const youIsMeta = argv.indexOf('--youmeta') > -1;
 if (!you && youIsMeta) { const v = flag('youmeta'); if (v && v.indexOf('--') !== 0) you = v; }
