@@ -15,6 +15,13 @@ const SHEET = path.join(dir, 'sheet.json');
 const argv = process.argv.slice(2);
 const text = argv[0];
 if (!text) { console.error('usage: node gm.js "text" [--you "..."] [--seq N] ...'); process.exit(1); }
+// A flag arriving as the turn text means the call was mis-quoted (the shell split the arguments):
+// refuse it rather than writing nonsense into the record.
+if (/^--/.test(String(text).trim())) {
+  console.error('refused: the turn text is "' + text + '", which is a flag, not narration - the command was mis-quoted. Put the narration first, in quotes: node gm.js "[warm] ..." --mem "nell|..."');
+  process.exit(1);
+}
+if (!String(text).trim() || String(text).trim().length < 3) { console.error('refused: the turn text is empty or too short to be a turn.'); process.exit(1); }
 const flag = n => { const i = argv.indexOf('--' + n); return i > -1 ? argv[i + 1] : null; };
 
 const doc = JSON.parse(fs.readFileSync(CHAT, 'utf8'));
