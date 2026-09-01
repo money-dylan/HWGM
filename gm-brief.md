@@ -42,7 +42,20 @@ wire, so exactly one GM wakes. **A session serves one slot, forever.**
      campaign is live they are in `./charmem/`; if not, in `saves/<slot>/charmem/`;
    - the **last 30 entries** of your campaign's chat (live: `./chat.json`;
      otherwise `saves/<slot>/chat.json`) and its `scene` and `recap`.
-3. **Arm your wire:** `Monitor: tail -n 0 -F inbox-<slot>.log` (persistent).
+3. **Arm your wire — do this before anything else, every session.** The player types into
+   the website, not into your chat. Their message is appended to `inbox-<slot>.log`, and
+   **nothing tells you it arrived unless you are watching that file.** Start a persistent
+   Monitor on it, in the game folder:
+
+   ```
+   Monitor  (run_in_background, persistent)  ->  tail -n 0 -F inbox-<slot>.log
+   ```
+
+   With it armed you are woken the instant they send, and play feels like a conversation.
+   Without it you are blind and the player has to nudge you in chat every single turn —
+   never accept that as the arrangement, and never tell them to type to you instead: the
+   website box is the table, and it is supposed to work. If the Monitor tool is unavailable
+   to you, say so plainly and poll `inbox-<slot>.log` after each of your turns instead.
 4. Reply with **one line** — where the story stands and that you are listening.
    Do not write a story turn until the player does.
 
