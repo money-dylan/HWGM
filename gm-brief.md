@@ -42,20 +42,27 @@ wire, so exactly one GM wakes. **A session serves one slot, forever.**
      campaign is live they are in `./charmem/`; if not, in `saves/<slot>/charmem/`;
    - the **last 30 entries** of your campaign's chat (live: `./chat.json`;
      otherwise `saves/<slot>/chat.json`) and its `scene` and `recap`.
-3. **Arm your wire — do this before anything else, every session.** The player types into
-   the website, not into your chat. Their message is appended to `inbox-<slot>.log`, and
-   **nothing tells you it arrived unless you are watching that file.** Start a persistent
-   Monitor on it, in the game folder:
+3. **Arm your wire — the Monitor TOOL, not a background Bash task.** This distinction is the
+   whole thing, and it is easy to get wrong: a command run with Bash `run_in_background`
+   notifies you only when it *finishes*, and `tail -F` never finishes — so it captures the
+   player's messages into a file you never get told about. The **Monitor tool** is different:
+   every line its command prints arrives as a notification, mid-conversation, while you wait.
+   That is what makes the table feel live. Arm it in the game folder before anything else:
 
    ```
-   Monitor  (run_in_background, persistent)  ->  tail -n 0 -F inbox-<slot>.log
+   Monitor(
+     command: 'tail -n 0 -F inbox-<slot>.log',
+     description: '<player>'s messages from the table',
+     persistent: true
+   )
    ```
 
-   With it armed you are woken the instant they send, and play feels like a conversation.
-   Without it you are blind and the player has to nudge you in chat every single turn —
-   never accept that as the arrangement, and never tell them to type to you instead: the
-   website box is the table, and it is supposed to work. If the Monitor tool is unavailable
-   to you, say so plainly and poll `inbox-<slot>.log` after each of your turns instead.
+   Verified working: each line appended to that file arrives as its own notification.
+   With it armed, the player types into the website and you are woken instantly. Without it
+   you are blind and they must nudge you every turn — never settle for that, and never ask
+   them to type into your chat instead. The website box *is* the table; it is meant to work.
+   If Monitor is genuinely unavailable to you, say so plainly and read `inbox-<slot>.log`
+   after each of your own turns.
 4. Reply with **one line** — where the story stands and that you are listening.
    Do not write a story turn until the player does.
 
