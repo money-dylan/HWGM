@@ -1153,7 +1153,7 @@ one thing: they kept their hat on.</div>
       <div class="sheet-id"><span class="bigname fell" style="font-size:2.1rem">Tales of the Castle</span>
         <div class="sheet-sub"><span class="fell">side stories &mdash; listen or read; nothing here changes your year</span></div>
       </div>
-      <div class="purse"><div class="coin"><span id="tales-count">0</span><label>unlocked</label></div></div>
+      <div class="purse"><div class="coin"><span id="tales-count">0</span><label>unlocked</label></div><div class="coin"><span id="tales-read">0</span><label>read</label></div></div>
     </header>
     <div class="talefilter" id="talefilter"></div>
     <div id="talesgrid"></div>
@@ -1480,6 +1480,9 @@ a.chip{text-decoration:none}
 .bookcover::after{content:"";position:absolute;left:0;right:0;top:10px;height:1px;background:rgba(255,246,220,.22);box-shadow:0 132px 0 rgba(255,246,220,.22)}
 .bctitle{font-family:"IM Fell English",Georgia,serif;font-size:.86rem;line-height:1.25;color:rgba(255,250,235,.94);text-shadow:0 1px 3px rgba(0,0,0,.55)}
 .bookcard.locked .bctitle{font-style:italic;color:rgba(255,250,235,.55)}
+.bookcard.read .bookcover{filter:saturate(.72)}
+.bookcard.read .bookcap{color:var(--good)}
+.bcheard{box-shadow:0 0 0 1px rgba(255,250,235,.35)}
 .bcheard{position:absolute;top:6px;right:7px;font-size:.8rem;color:rgba(255,250,235,.95);background:rgba(0,0,0,.3);border-radius:50%;width:1.35em;height:1.35em;line-height:1.35em}
 .bookcap{display:block;font-family:"IM Fell English SC",Georgia,serif;font-size:.66rem;letter-spacing:.08em;color:var(--faint);margin-top:.45rem;line-height:1.35;height:3.6em;overflow:hidden}
 
@@ -2181,13 +2184,19 @@ function tok(n){ return getComputedStyle(document.documentElement).getPropertyVa
     var bar=document.getElementById('talefilter');
     if(bar){
       bar.innerHTML='';
-      ['all','unlocked','sealed'].forEach(function(k){
+      ['all','unread','read','sealed'].forEach(function(k){
         var b=document.createElement('button'); b.type='button'; b.className='chip'+(filter===k?' on':''); b.textContent=k;
         b.addEventListener('click',function(){ filter=k; render() }); bar.appendChild(b);
       });
     }
     order.forEach(function(g){
-      var items=groups[g].filter(function(t){ return filter==='all'||(filter==='unlocked'?t.unlocked:!t.unlocked) });
+      var items=groups[g].filter(function(t){
+        if(filter==='all')return true;
+        if(filter==='sealed')return !t.unlocked;
+        if(filter==='read')return t.unlocked&&store['heard_'+t.id];
+        if(filter==='unread')return t.unlocked&&!store['heard_'+t.id];
+        return t.unlocked;
+      });
       items.sort(function(a,b){ return chapOrder(a.chapter)-chapOrder(b.chapter) });
       if(!items.length)return;
       var wrap=document.createElement('div'); wrap.className='talegroup';
@@ -2197,13 +2206,15 @@ function tok(n){ return getComputedStyle(document.documentElement).getPropertyVa
       grid.appendChild(wrap);
     });
     var cnt=document.getElementById('tales-count'); if(cnt)cnt.textContent=n;
+    var rd=document.getElementById('tales-read');
+    if(rd)rd.textContent=TALES.filter(function(t){ return t.unlocked&&store['heard_'+t.id] }).length;
     var tp=document.getElementById('talespage'); if(tp)tp.dataset.h=(store.house||'');
   }
   var CATHUE={'Captain':'#2f6f8f','Mum & Edie':'#6b4c8a','Remus':'#a04435','Captain':'#2f6f8f','Nell':'#7fb79a','Nell & Posy':'#c9a45c','Posy':'#d9a441','Home':'#b56a4f','Screech':'#8fa8d8','Idris':'#39527e','Dumbledore':'#6f5a9e','The Grounds':'#5c7a4a','The Castle':'#8a734a','Rooke':'#2c5c46','Madam Whisp':'#666a75','The Collector':'#4a3f4a','H.B.':'#7c1f23'};
   function card(t){
       var heard=!!store['heard_'+t.id];
       var c=document.createElement('div');
-      c.className='bookcard'+(t.unlocked?'':' locked');
+      c.className='bookcard'+(t.unlocked?'':' locked')+(t.unlocked&&heard?' read':'');
       var cov=document.createElement('div'); cov.className='bookcover';
       cov.style.setProperty('--bc', t.unlocked?(CATHUE[t.cat]||'#8a734a'):'#39322a');
       var bt=document.createElement('span'); bt.className='bctitle';
@@ -2213,7 +2224,7 @@ function tok(n){ return getComputedStyle(document.documentElement).getPropertyVa
       var cap=document.createElement('span'); cap.className='bookcap';
       if(t.unlocked){
         var mins=Math.max(2,Math.round((t.text||'').split(/\s+/).length/165));
-        cap.textContent=(t.sub?t.sub+' \u00b7 ':'')+mins+' min';
+        cap.textContent=(t.sub?t.sub+' \u00b7 ':'')+mins+' min'+(heard?' \u00b7 read':'');
       } else {
         cap.textContent=t.hint||'unlocks as the story turns';
       }
