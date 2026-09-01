@@ -1311,6 +1311,8 @@ mark.bookhit{background:var(--gilt);color:var(--ground);padding:0 .1em;border-ra
 #cmdpop button:hover{background:var(--panel2)}
 #cmdpop button b{font-family:"IM Fell English SC",Georgia,serif;font-weight:400;letter-spacing:.05em;display:block}
 #cmdpop button span{font-size:.74rem;color:var(--faint)}
+.msg-gm .corrnote{display:block;margin-top:.5rem;padding:.35rem .6rem;border-left:2px solid var(--seal);background:rgba(140,47,42,.07);font-size:.82rem;font-style:italic;color:var(--faint);border-radius:0 3px 3px 0}
+.msg-gm .corrnote b{font-family:"IM Fell English SC",Georgia,serif;font-style:normal;letter-spacing:.05em;color:var(--seal);font-weight:400}
 .msg-gm.quill{opacity:.75;font-style:italic}
 .quill .dots span{animation:dotpulse 1.4s infinite;display:inline-block}
 .quill .dots span:nth-child(2){animation-delay:.35s}
@@ -1806,6 +1808,11 @@ function tok(n){ return getComputedStyle(document.documentElement).getPropertyVa
         cv.setAttribute('aria-label','Scene painting'); b.appendChild(cv);
         try{ paintPlate(cv) }catch(e){} }
       b.appendChild(linkTerms(String(m.text).replace(/\[[a-z]+\]\s*/gi,'')));
+      if(m.corrections&&m.corrections.length){
+        var cn=document.createElement('span'); cn.className='corrnote';
+        cn.innerHTML='<b>\u270e corrected:</b> '+m.corrections.map(function(x){ return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;') }).join(' \u00b7 ');
+        b.appendChild(cn);
+      }
       target.appendChild(b);
     });
     if(pending.length){

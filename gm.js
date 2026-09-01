@@ -61,6 +61,46 @@ if (argv.indexOf('--noinbox') < 0) {
 // --retract N: strike the last N story entries from the record. They stay in the file for the
 // player's own history but are never sent to the Game Master again and never shown at the table,
 // so a rewind actually rewinds instead of leaving the mistake in play.
+// --correct "12,18|what was actually true": pin a correction to those entries. The turns stay
+// (their good parts are still story) but the correction is attached and is read with them forever.
+// --memstrike "id|phrase": strike every memory line for that character containing the phrase.
+// Struck lines are kept in the file, marked, and are never sent to the Game Master again.
+const ms = flag('memstrike');
+if (ms) {
+  const bar = ms.indexOf('|');
+  const who = ms.slice(0, bar < 0 ? ms.length : bar).trim();
+  const phrase = bar < 0 ? '' : ms.slice(bar + 1).trim();
+  if (!who || !phrase) { console.error('refused: --memstrike needs "id|phrase"'); process.exit(1); }
+  const mf = path.join(dir, 'charmem', who + '.md');
+  if (!fs.existsSync(mf)) console.log('  no memory file for ' + who);
+  else {
+    const lines = fs.readFileSync(mf, 'utf8').split(/\r?\n/);
+    let n = 0;
+    const next = lines.map(l => {
+      if (/^- /.test(l) && !/^- ~~/.test(l) && l.toLowerCase().includes(phrase.toLowerCase())) { n++; return '- ~~STRUCK (never happened)~~ ' + l.slice(2); }
+      return l;
+    });
+    fs.writeFileSync(mf, next.join('\n'));
+    console.log('  struck ' + n + ' memory line' + (n === 1 ? '' : 's') + ' for ' + who);
+  }
+}
+
+const corr = flag('correct');
+if (corr) {
+  const bar = corr.indexOf('|');
+  const idxs = corr.slice(0, bar < 0 ? corr.length : bar).split(/[,\s]+/).map(x => parseInt(x, 10)).filter(x => !isNaN(x));
+  const what = bar < 0 ? '' : corr.slice(bar + 1).trim();
+  if (!what) { console.error('refused: --correct needs "entries|what was actually true"'); process.exit(1); }
+  let hit = 0;
+  for (const i of idxs) {
+    if (i < 0 || i >= doc.log.length) { console.log('  no entry ' + i); continue; }
+    const e = doc.log[i];
+    e.corrections = (e.corrections || []).concat([what]);
+    hit++;
+  }
+  console.log('  corrected ' + hit + ' entr' + (hit === 1 ? 'y' : 'ies') + ': ' + what.slice(0, 90));
+}
+
 const retractN = parseInt(flag('retract') || '0', 10);
 if (retractN > 0) {
   let done = 0;

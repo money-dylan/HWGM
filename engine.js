@@ -53,6 +53,10 @@ Turn text rules: second person, the fireside narrator voice from the voice bible
 
 CHECK, DO NOT GUESS: you see only the most recent turns and the digest. For anything older - who knows what, who was where, what was said to whom - call search_record before you assert it, and always when the player disputes something. "NOT FOUND" means it never happened; say so plainly and correct the record rather than defending the mistake.
 
+WHEN THE PLAYER CORRECTS YOU (the common case - they are disputing something you said, not undoing what they did): search_record to find which turns assert it, correct_record to pin what is actually true onto those entries, strike_memory for any character whose memory file carries the same wrong fact, then rewrite the digest. All four, not one - the error lives in every place it was written, and the ones you leave behind put it back.
+
+Do not merely apologise in the reply - an unpinned correction is forgotten within a few turns and the error returns. Do not retract a whole turn for this; the rest of it still happened.
+
 A REWIND MUST ACTUALLY REWIND: when the player rewinds, or says a thing did not happen, call retract_turns. Saying "rolled back" removes nothing - the turn stays in the record and you will read it back as fact a few turns later, which is exactly how a corrected mistake creeps back in.
 
 TALES ARE COMMISSIONED, never volunteered: call write_tales ONLY when the player explicitly asks for tales in that message. Never at a chapter close, never at session end, never on your own initiative, never "while we're here" - not one. A scene being lovely is not a request. If you think tales are owed, say so in a sentence and wait to be asked.
@@ -115,7 +119,7 @@ function memoriesFor(slot, recentText) {
   const out = [];
   for (const h of keep) {
     const lines = read(path.join(mdir, h.f)).split(/\r?\n/);
-    const events = lines.filter(l => /^- /.test(l)), rest = lines.filter(l => !/^- /.test(l) && l.trim());
+    const events = lines.filter(l => /^- /.test(l) && !/^- ~~STRUCK/.test(l)), rest = lines.filter(l => !/^- /.test(l) && l.trim());
     const trimmed = rest.concat(events.length > 15 ? ['- (' + (events.length - 15) + ' earlier events omitted)'].concat(events.slice(-15)) : events).join('\n');
     out.push('### ' + (h.p ? h.p.name : h.id) + ' (' + h.id + ')' + String.fromCharCode(10) + trimmed);
   }
@@ -148,7 +152,9 @@ function buildScene(slot, window) {
   const stable = [ENGINE_RULES, briefSections(), read(path.join(dir, 'voice-bible.md')), read(path.join(dir, 'roll-doctrine.md')), '# THE RULEBOOK (digest)\n' + rulesDigest()].join('\n\n---\n\n');
   const semi = ['# CONTINUITY — this campaign\n' + continuityForPrompt(slot), '# CAST ids\n' + castList].join('\n\n---\n\n');
   const volatile = [sheetSummary(sheet), '# CHARACTER MEMORY — people in this scene\n' + (memoriesFor(slot, recentText) || '(none matched)'), '# SCENE\n' + (chat.scene || '')].join('\n\n---\n\n');
-  const messages = recent.map(e => ({ role: e.who === 'you' ? 'user' : 'assistant', content: String(e.text) }));
+  const messages = recent.map(e => ({ role: e.who === 'you' ? 'user' : 'assistant',
+    // a correction the player made is attached here so this turn can never be read as true again
+    content: String(e.text) + ((e.corrections || []).length ? '\n\n[CORRECTED BY THE PLAYER - this turn got something wrong: ' + e.corrections.join(' | ') + ']' : '') }));
   // the API needs alternating roles starting with user; merge neighbours
   const merged = [];
   for (const m of messages) { const last = merged[merged.length - 1]; if (last && last.role === m.role) last.content += '\n\n' + m.content; else merged.push({ ...m }); }
@@ -189,12 +195,17 @@ const TOOLS = [
         met: { type: ['boolean', 'null'] } } } } } } },
   { name: 'search_record', description: 'Search the full played transcript of this campaign - every turn, not only the recent ones you can see. Use it BEFORE asserting anything about the past that is not in the digest, and always when the player disputes a fact.', strict: true,
     input_schema: { type: 'object', additionalProperties: false, required: ['query'], properties: { query: { type: 'string', description: 'a word or phrase, e.g. "brass disc" or "Priya"' } } } },
+  { name: 'correct_record', description: 'Pin a correction onto specific past turns that got something wrong - use this when the player says something you asserted never happened or is untrue. The turns stay (their good parts are still the story) but your correction is attached and is read with them from now on, so the error cannot come back. Find the entry numbers with search_record first.', strict: true,
+    input_schema: { type: 'object', additionalProperties: false, required: ['entries', 'correction'], properties: { entries: { type: 'array', items: { type: 'integer' }, description: 'entry numbers from search_record' }, correction: { type: 'string', description: 'what is actually true, in one sentence' } } } },
+  { name: 'strike_memory', description: 'Strike a wrong line out of a character memory file. Character memory is append-only, so a corrected fact otherwise sits above its own correction and gets read as true. Use this whenever you correct something that was also written into someone memory.',
+    input_schema: { type: 'object', additionalProperties: false, required: ['id', 'phrase'], properties: { id: { type: 'string', description: 'character id, e.g. "rooke"' }, phrase: { type: 'string', description: 'a distinctive phrase from the wrong line' } } } },
   { name: 'retract_turns', description: 'Strike the last N story turns from the record when the player rewinds or says something did not happen. They stop being part of the story for everyone, including you. Saying "rolled back" removes nothing - this does.', strict: true,
     input_schema: { type: 'object', additionalProperties: false, required: ['count', 'reason'], properties: { count: { type: 'integer', description: 'how many recent story turns to strike' }, reason: { type: 'string' } } } },
 ];
 
 // haiku cannot compile our strict schemas into a grammar; it gets the same tools unstrict
-const TOOLSET = /haiku/.test(MODEL) ? TOOLS.map(t => Object.assign({}, t, { strict: false })) : TOOLS;
+// six strict schemas exceed the API's grammar budget; only the turn itself needs strict validation
+const TOOLSET = TOOLS.map(t => Object.assign({}, t, { strict: t.name === 'file_turn' && !/haiku/.test(MODEL) }));
 
 /* ---------------- filing ---------------- */
 function fileTurn(slot, t) {
@@ -296,11 +307,29 @@ function searchRecord(slot, query) {
     if (!en || en.retracted || !re.test(String(en.text))) return;
     const t = String(en.text).replace(/\s+/g, ' ');
     const at = t.search(re);
-    hits.push('[' + i + '] ' + (en.who === 'you' ? 'PLAYER' : 'GM') + (en.meta ? ' (aside)' : '') + ': …' + t.slice(Math.max(0, at - 110), at + 220) + '…');
+    hits.push('[' + i + '] ' + (en.who === 'you' ? 'PLAYER' : 'GM') + (en.meta ? ' (aside)' : '') + ': …' + t.slice(Math.max(0, at - 110), at + 220) + '…'
+      + ((en.corrections || []).length ? '\n      [CORRECTED: ' + en.corrections.join(' | ') + ']' : ''));
   });
   if (!hits.length) return 'NOT FOUND in the played record: "' + q + '". It has never happened at this table - do not assert it.';
   const head = hits.length + ' entries mention "' + q + '" (earliest first; entry numbers are positions in the record):\n';
   return head + (hits.length > 12 ? hits.slice(0, 6).concat(['   … ' + (hits.length - 12) + ' more …'], hits.slice(-6)) : hits).join('\n');
+}
+function correctRecord(slot, input) {
+  const entries = (input.entries || []).filter(n => Number.isInteger(n));
+  const what = String(input.correction || '').trim();
+  if (!entries.length || !what) return 'need entry numbers and a correction';
+  if (DRY) { log('DRY — would correct ' + entries.join(',') + ': ' + what); return 'dry'; }
+  const r = spawnSync(process.execPath, ['gm.js', '--correct', entries.join(',') + '|' + what, '--as', slot], { cwd: dir, encoding: 'utf8' });
+  log('correction:', (r.stdout || '').trim().replace(/\n/g, ' | '));
+  return r.status === 0 ? 'correction pinned to ' + entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies') : 'REFUSED: ' + (r.stderr || r.stdout);
+}
+function strikeMemory(slot, input) {
+  const id = String(input.id || '').trim(), phrase = String(input.phrase || '').trim();
+  if (!id || !phrase) return 'need id and phrase';
+  if (DRY) { log('DRY — would strike memory of ' + id + ' containing: ' + phrase); return 'dry'; }
+  const r = spawnSync(process.execPath, ['gm.js', '--memstrike', id + '|' + phrase, '--as', slot], { cwd: dir, encoding: 'utf8' });
+  log('memory strike:', (r.stdout || '').trim().replace(/\n/g, ' | '));
+  return r.status === 0 ? (r.stdout || '').trim() : 'REFUSED: ' + (r.stderr || r.stdout);
 }
 function retractTurns(slot, input) {
   const count = Math.max(1, Math.min(20, parseInt(input.count, 10) || 1));
@@ -356,6 +385,8 @@ async function answerInner(slot, playerText) {
         else if (u.name === 'update_continuity') out = updateContinuity(slot, u.input.note, u.input.mode);
         else if (u.name === 'update_cast') out = updateCast(slot, u.input);
         else if (u.name === 'search_record') out = searchRecord(slot, u.input.query);
+        else if (u.name === 'correct_record') out = correctRecord(slot, u.input);
+        else if (u.name === 'strike_memory') out = strikeMemory(slot, u.input);
         else if (u.name === 'retract_turns') out = retractTurns(slot, u.input);
       } catch (e) { out = 'error: ' + e.message; }
       results.push({ type: 'tool_result', tool_use_id: u.id, content: out });

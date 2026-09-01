@@ -94,6 +94,8 @@ file's timeline and standing appointments so the next session catches up cold.
 
 
 
+**Corrections must land everywhere (2026-09-01):** an error the player corrects usually lives in three places at once - the turn that said it, the character memory it was written into, and the digest. Fix all three or it comes back: `search_record` to find the turns, `correct_record` (gm.js `--correct "655|what is true"`) to pin the truth to them, `strike_memory` (`--memstrike "rooke|phrase"`) for the memory line, then rewrite the digest. Struck memory lines and pinned corrections travel with the record forever.
+
 **Rewinds are real, and check before you assert (2026-09-01):** a rewind that is only *stated* removes nothing - the struck turn stays in the record and gets read back as fact a few turns later, which is how a corrected mistake creeps back in. Strike it: `node gm.js --retract N` (engine: the `retract_turns` tool). Retracted entries are hidden at the table and never sent to the GM again. And you can only see the recent turns: for anything older - who knows what, who was told what - search the transcript before asserting it (engine: `search_record`; a session can grep chat.json). When the player disputes a fact, search first and correct the ledger, never defend the mistake.
 
 **Bookkeeping without a turn (2026-09-01):** to record memory or sheet changes with nothing posted to the table, call gm.js with flags only - `node gm.js --mem "nell|what happened" --set clues=4`. Never invent filler narration ("memory log only.") to satisfy the command; that lands at the player table as a turn. A flag arriving where the narration belongs, with no other arguments, is refused as a mis-quote.
